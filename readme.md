@@ -1,0 +1,1 @@
+AssemblyGen wraps System.Reflection.Emit similar to System.Linq.Expressions, but with improvements and added compatibility with TypeBuilder from System.Reflection.Emit so that full types may be compiled with an improved System.Linq.Expressions like API
