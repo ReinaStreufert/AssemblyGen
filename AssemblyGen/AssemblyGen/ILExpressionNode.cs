@@ -33,6 +33,25 @@ namespace AssemblyGen
             return new ILNode(generator);
         }
 
+        public static ILNode Sequential(IEnumerable<IILExpressionNode> nodes)
+        {
+            return new ILNode(il =>
+            {
+                foreach (var node in nodes)
+                    node.WriteInstructions(il);
+            });
+        }
+
+        public static ILNode NewObject(ConstructorInfo constructor, params IILExpressionNode[] arguments)
+        {
+            return new ILNode(il =>
+            {
+                foreach (var arg in arguments)
+                    arg.WriteInstructions(il);
+                il.Emit(OpCodes.Newobj, constructor);
+            });
+        }
+
         public static ILNode LoadField(IILExpressionNode? instance, FieldInfo field)
         {
             return new ILNode(il =>
@@ -61,7 +80,7 @@ namespace AssemblyGen
             return new ILNode(il => il.Emit(OpCodes.Ldarg, argumentIndex));
         }
 
-        public static ILNode StoreParameter(int parameterIndex, IILExpressionNode value)
+        public static ILNode StoreArgument(int parameterIndex, IILExpressionNode value)
         {
             return new ILNode(il =>
             {
@@ -84,8 +103,17 @@ namespace AssemblyGen
             });
         }
 
-        public static ILMethodCallNode MethodCall(IILExpressionNode? instance, MethodInfo method, bool preserveReturnValue = true, params IILExpressionNode[] arguments)
+        public static ILMethodCallNode Call(IILExpressionNode? instance, MethodInfo method, bool preserveReturnValue = true, params IILExpressionNode[] arguments)
             => new ILMethodCallNode(instance, method, arguments, preserveReturnValue);
+
+        public static ILNode LoadVirtualFunction(IILExpressionNode instance, MethodInfo method)
+        {
+            return new ILNode(il =>
+            {
+                instance.WriteInstructions(il);
+                il.Emit(OpCodes.Ldvirtftn, method);
+            });
+        }
     }
 
     public class ILNode : IILExpressionNode

@@ -88,7 +88,7 @@ namespace AssemblyGen
                 throw new ArgumentException($"type '{value.Type.Name}' is not assignable to property of type '{property.PropertyType.Name}'");
             var setter = property.GetSetMethod() ??
                 throw new ArgumentException($"No public set accessor found for property '{Type.Name}.{property.Name}'");
-            Destination.Put(ILExpressionNode.MethodCall(Take(this), setter, false, Take(value)));
+            Destination.Put(ILExpressionNode.Call(Take(this), setter, false, Take(value)));
         }
 
         protected abstract IILExpressionNode TakeAsExpressionNode();

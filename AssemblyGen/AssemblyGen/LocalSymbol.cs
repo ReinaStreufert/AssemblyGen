@@ -11,18 +11,20 @@ namespace AssemblyGen
     {
         public override Type Type => _LocalBuilder.LocalType;
 
-        public LocalSymbol(IGeneratorTarget destination, LocalBuilder builder) : base(destination)
+        public LocalSymbol(IGeneratorTarget destination, LocalBuilder builder, int closureLevel = 0) : base(destination)
         {
             _LocalBuilder = builder;
+            _ContainerClosureLevel = closureLevel;
         }
 
         private LocalBuilder _LocalBuilder;
+        private int _ContainerClosureLevel;
 
         protected override IILExpressionNode TakeAsExpressionNode()
         {
             var closure = Destination.CurrentClosure;
-            if (closure != null)
-                return ILExpressionNode.LoadField(ILExpressionNode.LoadThis, closure.CaptureLocal(_LocalBuilder.LocalIndex));
+            if (closure != null && closure.Level >= _ContainerClosureLevel)
+                return ILExpressionNode.LoadField(ILExpressionNode.LoadThis, closure.CaptureLocal(_LocalBuilder.LocalIndex, _ContainerClosureLevel, Type));
             return ILExpressionNode.LoadLocal(_LocalBuilder.LocalIndex);
         }
 
@@ -31,8 +33,9 @@ namespace AssemblyGen
             if (!value.Type.IsAssignableTo(Type))
                 throw new ArgumentException($"Type '{value.Type.Name}' is not assignable to local of type '{Type.Name}'");
             var closure = Destination.CurrentClosure;
-            var storeNode = closure == null ? ILExpressionNode.StoreLocal(_LocalBuilder.LocalIndex, Take(value)) :
-                ILExpressionNode.StoreField(ILExpressionNode.LoadThis, closure.CaptureLocal(_LocalBuilder.LocalIndex), Take(value));
+            ILNode storeNode = closure != null && closure.Level >= _ContainerClosureLevel ? 
+                ILExpressionNode.StoreField(ILExpressionNode.LoadThis, closure.CaptureLocal(_LocalBuilder.LocalIndex, _ContainerClosureLevel, Type), Take(value)) :
+                ILExpressionNode.StoreLocal(_LocalBuilder.LocalIndex, Take(value));
             Destination.Put(storeNode);
         }
     }

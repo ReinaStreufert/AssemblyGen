@@ -36,8 +36,9 @@ namespace AssemblyGen
 
     public interface IClosure
     {
-        public FieldInfo CaptureLocal(int localIndex);
-        public FieldInfo CaptureArgument(int argumentIndex);
+        public int Level { get; }
+        public FieldInfo CaptureLocal(int localIndex, int closureLevel, Type valueType);
+        public FieldInfo CaptureArgument(int argumentIndex, int closureLevel, Type valueType);
     }
 
     public interface IILExpressionNode

@@ -15,7 +15,7 @@ namespace AssemblyGen
             var argumentNodes = arguments
                 .Select(Take)
                 .ToArray();
-            var callNode = ILExpressionNode.MethodCall(instanceNode, method, false, argumentNodes);
+            var callNode = ILExpressionNode.Call(instanceNode, method, false, argumentNodes);
             var callStatement = destination.Put(callNode);
             return new MethodCallSymbol(destination, method.ReturnType, callStatement, callNode);
         }

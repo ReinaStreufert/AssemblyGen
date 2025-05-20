@@ -11,30 +11,33 @@ namespace AssemblyGen
     {
         public override Type Type => _ParamType;
 
-        public ArgumentSymbol(IGeneratorTarget destination, int paramIndex, Type paramType) : base(destination)
+        public ArgumentSymbol(IGeneratorTarget destination, int paramIndex, Type paramType, int containerClosureLevel) : base(destination)
         {
             _ArgIndex = paramIndex;
             _ParamType = paramType;
+            _ContainerClosureLevel = containerClosureLevel;
         }
 
         private int _ArgIndex;
+        private int _ContainerClosureLevel;
         private Type _ParamType;
 
         protected override IILExpressionNode TakeAsExpressionNode()
         {
             var closure = Destination.CurrentClosure;
-            if (closure != null)
-                return ILExpressionNode.LoadField(ILExpressionNode.LoadThis, closure.CaptureArgument(_ArgIndex));
+            if (closure != null && closure.Level >= _ContainerClosureLevel)
+                return ILExpressionNode.LoadField(ILExpressionNode.LoadThis, closure.CaptureArgument(_ArgIndex, _ContainerClosureLevel, _ParamType));
             return ILExpressionNode.LoadArgument(_ArgIndex);
         }
 
         public override void Assign(Symbol value)
         {
-            if (!value.Type.IsAssignableTo(_ParamType))
-                throw new ArgumentException($"type '{value.Type.Name}' is not assignable to parameter of type '{_ParamType}'");
+            if (!value.Type.IsAssignableTo(Type))
+                throw new ArgumentException($"Type '{value.Type.Name}' is not assignable to local of type '{Type.Name}'");
             var closure = Destination.CurrentClosure;
-            var storeNode = closure == null ? ILExpressionNode.StoreLocal(_ArgIndex, Take(value)) :
-                ILExpressionNode.StoreField(ILExpressionNode.LoadThis, closure.CaptureArgument(_ArgIndex), Take(value));
+            ILNode storeNode = closure != null && closure.Level >= _ContainerClosureLevel ?
+                ILExpressionNode.StoreField(ILExpressionNode.LoadThis, closure.CaptureArgument(_ArgIndex, _ContainerClosureLevel, _ParamType), Take(value)) :
+                ILExpressionNode.StoreArgument(_ArgIndex, Take(value));
             Destination.Put(storeNode);
         }
     }
