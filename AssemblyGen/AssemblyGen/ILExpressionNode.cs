@@ -14,7 +14,7 @@ namespace AssemblyGen
         {
             Action<ILGenerator> generator = compileTimeCst switch
             {
-                null => il => il.Emit(OpCodes.Ldc_I4_0),
+                null => il => il.Emit(OpCodes.Ldnull),
                 bool cst => il => il.Emit(OpCodes.Ldc_I4_S, cst ? 1 : 0),
                 string cst => il => il.Emit(OpCodes.Ldstr, cst),
                 byte cst => il => il.Emit(OpCodes.Ldc_I4_S, cst),
@@ -51,6 +51,36 @@ namespace AssemblyGen
                     instance.WriteInstructions(il);
                 value.WriteInstructions(il);
                 il.Emit(OpCodes.Stfld, field);
+            });
+        }
+
+        public static ILNode LoadThis => LoadArgument(0);
+
+        public static ILNode LoadArgument(int argumentIndex)
+        {
+            return new ILNode(il => il.Emit(OpCodes.Ldarg, argumentIndex));
+        }
+
+        public static ILNode StoreParameter(int parameterIndex, IILExpressionNode value)
+        {
+            return new ILNode(il =>
+            {
+                value.WriteInstructions(il);
+                il.Emit(OpCodes.Starg, parameterIndex);
+            });
+        }
+
+        public static ILNode LoadLocal(int localIndex)
+        {
+            return new ILNode(il => il.Emit(OpCodes.Ldloc, localIndex));
+        }
+
+        public static ILNode StoreLocal(int localIndex, IILExpressionNode value)
+        {
+            return new ILNode(il =>
+            {
+                value.WriteInstructions(il);
+                il.Emit(OpCodes.Stloc, localIndex);
             });
         }
 

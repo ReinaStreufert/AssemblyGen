@@ -54,37 +54,41 @@ namespace AssemblyGen
         {
             var field = Type.GetField(name);
             if (field != null)
-                return GetField(field);
+                return FieldGetSymbol.Create(Destination, this, field);
             var property = Type.GetProperty(name) ??
-                throw new ArgumentException($"No property found '{Type.Name}.{name}'");
+                throw new ArgumentException($"No field or property found '{Type.Name}.{name}'");
             return GetProperty(property);
-        }
-
-        private Symbol GetField(FieldInfo field)
-        {
-
         }
 
         private Symbol GetProperty(PropertyInfo property)
         {
             var getter = property.GetGetMethod() ??
-                throw new ArgumentException($"No public get accessor found '{Type.Name}.{name}'");
+                throw new ArgumentException($"No public get accessor found for property '{Type.Name}.{property.Name}'");
             return MethodCallSymbol.Create(Destination, getter, this);
-        }
-
-        public Symbol GetIndex(Symbol index)
-        {
-            var index = Type.GetProperty("Item")
         }
 
         public void SetFieldOrProperty(string name, Symbol value)
         {
-            throw new NotImplementedException();
+            var field = Type.GetField(name);
+            if (field != null)
+            {
+                if (!value.Type.IsAssignableTo(field.FieldType))
+                    throw new ArgumentException($"type '{value.Type.Name}' is not assignable to field of type '{field.FieldType.Name}'");
+                Destination.Put(ILExpressionNode.StoreField(Take(this), field, Take(value)));
+                return;
+            }
+            var property = Type.GetProperty(name) ??
+                throw new ArgumentException($"No field or property found '{Type.Name}.{name}'");
+            return SetProperty(property);
         }
 
-        public void SetIndex(Symbol index, Symbol value)
+        private void SetProperty(PropertyInfo property, Symbol value)
         {
-            throw new NotImplementedException();
+            if (!value.Type.IsAssignableTo(property.PropertyType))
+                throw new ArgumentException($"type '{value.Type.Name}' is not assignable to property of type '{property.PropertyType.Name}'");
+            var setter = property.GetSetMethod() ??
+                throw new ArgumentException($"No public set accessor found for property '{Type.Name}.{property.Name}'");
+            Destination.Put(ILExpressionNode.MethodCall(Take(this), setter, false, Take(value)));
         }
 
         protected abstract IILExpressionNode TakeAsExpressionNode();
@@ -107,5 +111,14 @@ namespace AssemblyGen
         }
 
         protected abstract IILExpressionNode ToExpressionNode();
+    }
+
+    public abstract class AssignableSymbol : Symbol, IAssignable<Symbol>
+    {
+        protected AssignableSymbol(IGeneratorTarget destination) : base(destination)
+        {
+        }
+
+        public abstract void Assign(Symbol value);
     }
 }

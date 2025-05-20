@@ -9,12 +9,17 @@ namespace AssemblyGen
 {
     public class FieldGetSymbol : IntermediateSymbol
     {
+        public static FieldGetSymbol Create(IGeneratorTarget destination, Symbol? instance, FieldInfo field)
+        {
+            var instanceNode = instance == null ? null : Take(instance);
+            return new FieldGetSymbol(destination, instanceNode, field);
+        }
+
         public override Type Type => _Field.FieldType;
 
-        public FieldGetSymbol(IGeneratorTarget destination, Symbol? instance, FieldInfo field) : base(destination)
+        private FieldGetSymbol(IGeneratorTarget destination, IILExpressionNode? instance, FieldInfo field) : base(destination)
         {
-            if (instance != null)
-                _Instance = Take(instance);
+            _Instance = instance;
             _Field = field;
         }
 

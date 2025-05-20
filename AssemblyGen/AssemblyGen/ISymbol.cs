@@ -23,14 +23,21 @@ namespace AssemblyGen
         public void SetFieldOrProperty(string name, TSymbol value);
     }
 
-    public interface IAssignable : ISymbol
+    public interface IAssignable<TSymbol> : ISymbol where TSymbol : ISymbol
     {
-        public void Assign(ISymbol value);
+        public void Assign(TSymbol value);
     }
 
     public interface IGeneratorTarget
     {
+        public IClosure? CurrentClosure { get; }
         public IStatement Put(IILExpressionNode node);
+    }
+
+    public interface IClosure
+    {
+        public FieldInfo CaptureLocal(int localIndex);
+        public FieldInfo CaptureArgument(int argumentIndex);
     }
 
     public interface IILExpressionNode

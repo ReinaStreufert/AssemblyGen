@@ -6,16 +6,21 @@ using System.Threading.Tasks;
 
 namespace AssemblyGen
 {
-    public interface IMethodGeneratorContext
+    public interface IMethodGeneratorContext<TSymbol, TAssignable> where TSymbol : class, ISymbol where TAssignable : class, IAssignable<TSymbol>
     {
+        public TSymbol? This { get; }
         public void Return();
-        public void Return(ISymbol returnValue);
-        public ISymbol GetArgument(Parameter parameter);
-        public ISymbol Local(Type type);
-        public ISymbol Lambda(MethodGenerator generator, IEnumerable<Parameter> parameters);
-        public ISymbol Lambda(MethodGenerator generator, params Parameter[] parameters);
-        public IBlock BeginIfStatement(ISymbol condition);
+        public void Return(TSymbol returnValue);
+        public TAssignable GetArgument(Parameter parameter);
+        public TAssignable DeclareLocal(Type type);
+        public IBlockExpression<TSymbol> Lambda(Type returnType, params Parameter[] parameters);
+        public IBlock BeginIfStatement(TSymbol condition);
         public ILoopBlock BeginLoop();
+    }
+
+    public interface IMethodGeneratorContext : IMethodGeneratorContext<Symbol, AssignableSymbol>
+    {
+
     }
 
     public delegate void MethodGenerator(IMethodGeneratorContext ctx);
@@ -25,13 +30,18 @@ namespace AssemblyGen
         public void End();
     }
 
-    public interface IConditionalBlock
+    public interface IBlockExpression<TSymbol> where TSymbol : ISymbol
+    {
+        public TSymbol End();
+    }
+
+    public interface IConditionalBlock : IBlock
     {
         public IConditionalBlock ElseIf(ISymbol symbol);
         public IBlock Else();
     }
 
-    public interface ILoopBlock
+    public interface ILoopBlock : IBlock
     {
         public void Break();
     }
