@@ -57,6 +57,8 @@ namespace AssemblyGen
                     emittable.Emit(il);
             }
 
+            public Symbol Constant(object? value) => new ConstantSymbol(_Target, value);
+
             public IMemberable<Symbol> StaticType(Type type) => new StaticMemberAccessor(type, _Target);
 
             public IIfBlock<Symbol> BeginIfStatement(Symbol condition)
@@ -118,7 +120,7 @@ namespace AssemblyGen
                         closureLocal.LocalIndex,
                         ILExpressionNode.NewObject(constructor))
                 };
-                var invocationMethod = closureTypeBuilder.DefineMethod(Identifier.Random(), MethodAttributes.Public | MethodAttributes.Virtual);
+                var invocationMethod = closureTypeBuilder.DefineMethod(Identifier.Random(), MethodAttributes.Public | MethodAttributes.Virtual | MethodAttributes.NewSlot);
                 invocationMethod.SetParameters(parameters.Select(p => p.Type).ToArray());
                 invocationMethod.SetReturnType(returnType);
                 var bodyIl = invocationMethod.GetILGenerator();
@@ -196,6 +198,14 @@ namespace AssemblyGen
                     if (HasEnded)
                         throw new InvalidOperationException("The loop has already ended");
                     Ctx._Target.Put(ILExpressionNode.Branch(_EscapeLabel));
+                }
+
+
+                public void Continue()
+                {
+                    if (HasEnded)
+                        throw new InvalidOperationException($"The loop has already ended");
+                    Ctx._Target.Put(ILExpressionNode.Branch(_RepeatLabel));
                 }
 
                 public override void End()

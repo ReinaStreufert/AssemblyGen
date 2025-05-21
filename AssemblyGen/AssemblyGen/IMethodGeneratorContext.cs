@@ -11,6 +11,7 @@ namespace AssemblyGen
         public TSymbol? This { get; }
         public void Return();
         public void Return(TSymbol returnValue);
+        public TSymbol Constant(object? value);
         public TAssignable GetArgument(Parameter parameter);
         public TAssignable DeclareLocal(Type type);
         public ILambdaBlock<TSymbol> Lambda(Type returnType, params Parameter[] parameters);
@@ -46,5 +47,6 @@ namespace AssemblyGen
     public interface ILoopBlock : IBlock
     {
         public void Break();
+        public void Continue();
     }
 }

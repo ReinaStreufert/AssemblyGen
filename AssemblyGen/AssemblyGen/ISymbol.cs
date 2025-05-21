@@ -12,7 +12,6 @@ namespace AssemblyGen
     public interface ISymbol
     {
         public Type Type { get; }
-
     }
 
     public interface IMemberable<TSymbol> : ISymbol where TSymbol : ISymbol
