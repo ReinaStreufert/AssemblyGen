@@ -18,6 +18,7 @@ namespace AssemblyGen
             methBuilder.SetReturnType(returnType);
             var generatorCtx = new MethodGeneratorContext(typeBuilder, methBuilder.GetILGenerator(), returnType, parameters, attributes.HasFlag(MethodAttributes.Static));
             generator(generatorCtx);
+            generatorCtx.Flush();
             return methBuilder;
         }
 
@@ -49,10 +50,14 @@ namespace AssemblyGen
 
             public void Flush()
             {
+                if (_BlockLevel > 0)
+                    throw new InvalidOperationException($"There are unclosed blocks");
                 var il = _Il;
                 foreach (var emittable in _EmitList)
                     emittable.Emit(il);
             }
+
+            public IMemberable<Symbol> StaticType(Type type) => new StaticMemberAccessor(type, _Target);
 
             public IIfBlock<Symbol> BeginIfStatement(Symbol condition)
             {

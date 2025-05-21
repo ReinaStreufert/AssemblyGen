@@ -10,7 +10,7 @@ using System.Xml.Linq;
 
 namespace AssemblyGen
 {
-    public abstract class Symbol : ISymbol
+    public abstract class Symbol : IMemberable<Symbol>
     {
         public static IILExpressionNode Take(Symbol symbol)
         {
@@ -34,7 +34,7 @@ namespace AssemblyGen
             var method = Type.MatchMethod(name, argTypes);
             if (method == null)
                 throw new ArgumentException($"No matching overload found '{Type.Name}.{name}({string.Join(", ", argTypes.Select(t => t.Name))})'");
-            return MethodCallSymbol.Create(Destination, method, this, args);
+            return MethodCallSymbol.Create(Destination, method, method.IsStatic ? null: this, args);
         }
 
         public Symbol CallMethod(MethodInfo method, params Symbol[] args)
@@ -45,26 +45,21 @@ namespace AssemblyGen
                 .Select(a => a.Type)
                 .ToArray();
             var matchedMethod = method.TryMatchMethod(argTypes);
-            if (method == null)
-                throw new ArgumentException($"No matching overload found '{Type.Name}.{method.Name}({string.Join(", ", argTypes.Select(t => t.Name))})'");
-            return MethodCallSymbol.Create(Destination, matchedMethod, this, args);
+            if (matchedMethod == null)
+                throw new ArgumentException($"Argument types do not match {nameof(method)}");
+            return MethodCallSymbol.Create(Destination, matchedMethod, matchedMethod.IsStatic ? null : this, args);
         }
 
         public Symbol GetFieldOrProperty(string name)
         {
             var field = Type.GetField(name);
             if (field != null)
-                return FieldGetSymbol.Create(Destination, this, field);
+                return FieldGetSymbol.Create(Destination, field.IsStatic ? null : this, field);
             var property = Type.GetProperty(name) ??
                 throw new ArgumentException($"No field or property found '{Type.Name}.{name}'");
-            return GetProperty(property);
-        }
-
-        private Symbol GetProperty(PropertyInfo property)
-        {
             var getter = property.GetGetMethod() ??
-                throw new ArgumentException($"No public get accessor found for property '{Type.Name}.{property.Name}'");
-            return MethodCallSymbol.Create(Destination, getter, this);
+                throw new ArgumentException($"No public get accessor found for property '{Type.Name}.{name}'");
+            return MethodCallSymbol.Create(Destination, getter, getter.IsStatic ? null : this);
         }
 
         public void SetFieldOrProperty(string name, Symbol value)
@@ -74,21 +69,16 @@ namespace AssemblyGen
             {
                 if (!value.Type.IsAssignableTo(field.FieldType))
                     throw new ArgumentException($"type '{value.Type.Name}' is not assignable to field of type '{field.FieldType.Name}'");
-                Destination.Put(ILExpressionNode.StoreField(Take(this), field, Take(value)));
+                Destination.Put(ILExpressionNode.StoreField(field.IsStatic ? null : Take(this), field, Take(value)));
                 return;
             }
             var property = Type.GetProperty(name) ??
                 throw new ArgumentException($"No field or property found '{Type.Name}.{name}'");
-            SetProperty(property, value);
-        }
-
-        private void SetProperty(PropertyInfo property, Symbol value)
-        {
             if (!value.Type.IsAssignableTo(property.PropertyType))
                 throw new ArgumentException($"type '{value.Type.Name}' is not assignable to property of type '{property.PropertyType.Name}'");
             var setter = property.GetSetMethod() ??
                 throw new ArgumentException($"No public set accessor found for property '{Type.Name}.{property.Name}'");
-            Destination.Put(ILExpressionNode.Call(Take(this), setter, false, Take(value)));
+            Destination.Put(ILExpressionNode.Call(setter.IsStatic ? null : Take(this), setter, false, Take(value)));
         }
 
         protected abstract IILExpressionNode TakeAsExpressionNode();
