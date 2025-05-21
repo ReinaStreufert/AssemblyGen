@@ -27,6 +27,7 @@ var writeTextBuilder = typeBuilder.DefineMethod("WriteText.imp", MethodAttribute
     elseStatement.End();
     var console = ctx.StaticType(typeof(Console));
     console.CallMethod(nameof(Console.WriteLine), messageText);
+    ctx.Return();
 }, typeof(void), textParam, setParam);
 typeBuilder.DefineMethodOverride(writeTextBuilder, typeof(IGenerated).GetMethod(nameof(IGenerated.WriteText))!);
 

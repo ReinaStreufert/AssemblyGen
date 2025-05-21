@@ -381,9 +381,9 @@ namespace AssemblyGen
 
                 protected int EnsureLevel()
                 {
-                    if (Ctx._BlockLevel < _Level || _HasEnded)
+                    if (Ctx._BlockLevel < _Level + 1 || _HasEnded)
                         throw new InvalidOperationException("The block has already ended");
-                    if (Ctx._BlockLevel > _Level)
+                    if (Ctx._BlockLevel > _Level + 1)
                         throw new InvalidOperationException("All blocks opened after this block must end before this block may end");
                     return _Level;
                 }
