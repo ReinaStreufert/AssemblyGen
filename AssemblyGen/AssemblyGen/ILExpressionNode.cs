@@ -10,6 +10,25 @@ namespace AssemblyGen
 {
     public static class ILExpressionNode
     {
+        public static ILNode Branch(Label destination)
+        {
+            return new ILNode(il => il.Emit(OpCodes.Br, destination));
+        }
+
+        public static ILNode BranchTrue(IILExpressionNode condition, Label destination)
+        {
+            return new ILNode(il =>
+            {
+                condition.WriteInstructions(il);
+                il.Emit(OpCodes.Brtrue, destination);
+            });
+        }
+
+        public static ILNode Label(Label label)
+        {
+            return new ILNode(il => il.MarkLabel(label));
+        }
+
         public static ILNode Constant(object? compileTimeCst)
         {
             Action<ILGenerator> generator = compileTimeCst switch
@@ -49,6 +68,16 @@ namespace AssemblyGen
                 foreach (var arg in arguments)
                     arg.WriteInstructions(il);
                 il.Emit(OpCodes.Newobj, constructor);
+            });
+        }
+
+        public static ILNode Return(IILExpressionNode? returnValue = null)
+        {
+            return new ILNode(il =>
+            {
+                if (returnValue != null)
+                    returnValue.WriteInstructions(il);
+                il.Emit(OpCodes.Ret);
             });
         }
 

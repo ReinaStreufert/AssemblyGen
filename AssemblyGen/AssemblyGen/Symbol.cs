@@ -12,7 +12,7 @@ namespace AssemblyGen
 {
     public abstract class Symbol : ISymbol
     {
-        protected static IILExpressionNode Take(Symbol symbol)
+        public static IILExpressionNode Take(Symbol symbol)
         {
             return symbol.TakeAsExpressionNode();
         }
@@ -44,7 +44,7 @@ namespace AssemblyGen
             var argTypes = args
                 .Select(a => a.Type)
                 .ToArray();
-            var matchedMethod = method.TryMatchMethod(method);
+            var matchedMethod = method.TryMatchMethod(argTypes);
             if (method == null)
                 throw new ArgumentException($"No matching overload found '{Type.Name}.{method.Name}({string.Join(", ", argTypes.Select(t => t.Name))})'");
             return MethodCallSymbol.Create(Destination, matchedMethod, this, args);
@@ -79,7 +79,7 @@ namespace AssemblyGen
             }
             var property = Type.GetProperty(name) ??
                 throw new ArgumentException($"No field or property found '{Type.Name}.{name}'");
-            return SetProperty(property);
+            SetProperty(property, value);
         }
 
         private void SetProperty(PropertyInfo property, Symbol value)

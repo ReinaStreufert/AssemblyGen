@@ -14,7 +14,7 @@ namespace AssemblyGen
         public TAssignable GetArgument(Parameter parameter);
         public TAssignable DeclareLocal(Type type);
         public ILambdaBlock<TSymbol> Lambda(Type returnType, params Parameter[] parameters);
-        public IBlock BeginIfStatement(TSymbol condition);
+        public IIfBlock<TSymbol> BeginIfStatement(TSymbol condition);
         public ILoopBlock BeginLoop();
     }
 
@@ -36,9 +36,9 @@ namespace AssemblyGen
         public TSymbol ToDelegate(Type delegateType);
     }
 
-    public interface IConditionalBlock : IBlock
+    public interface IIfBlock<TSymbol> : IBlock where TSymbol : ISymbol
     {
-        public IConditionalBlock ElseIf(ISymbol symbol);
+        public void ElseIf(TSymbol symbol);
         public IBlock Else();
     }
 

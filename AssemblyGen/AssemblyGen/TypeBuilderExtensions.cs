@@ -11,10 +11,14 @@ namespace AssemblyGen
 {
     public static class TypeBuilderExtensions
     {
-        public static void DefineMethod(this TypeBuilder typeBuilder, string name, MethodAttributes attributes, MethodGenerator generator, Type returnType, params Parameter[] parameters)
+        public static MethodBuilder DefineMethod(this TypeBuilder typeBuilder, string name, MethodAttributes attributes, MethodGenerator generator, Type returnType, params Parameter[] parameters)
         {
             var methBuilder = typeBuilder.DefineMethod(name, attributes);
             methBuilder.SetParameters(parameters.Select(p => p.Type).ToArray());
+            methBuilder.SetReturnType(returnType);
+            var generatorCtx = new MethodGeneratorContext(typeBuilder, methBuilder.GetILGenerator(), returnType, parameters, attributes.HasFlag(MethodAttributes.Static));
+            generator(generatorCtx);
+            return methBuilder;
         }
 
         private class MethodGeneratorContext : IMethodGeneratorContext
@@ -50,14 +54,24 @@ namespace AssemblyGen
                     emittable.Emit(il);
             }
 
-            public IBlock BeginIfStatement(Symbol condition)
+            public IIfBlock<Symbol> BeginIfStatement(Symbol condition)
             {
-                throw new NotImplementedException();
+                if (condition.Type != typeof(bool))
+                    throw new ArgumentException($"{nameof(condition)} must be of type boolean");
+                var branchBegin = _Il.DefineLabel();
+                _Target.Put(ILExpressionNode.BranchTrue(Symbol.Take(condition), branchBegin));
+                var branchBody = new List<IEmittable>();
+                var conditionalBranch = new Branch(branchBegin, branchBody);
+                var ifBlock = new IfBlock(this, _BlockLevel++, new List<Branch>() { conditionalBranch });
+                _EmitList = branchBody;
+                return ifBlock;
             }
 
             public ILoopBlock BeginLoop()
             {
-                throw new NotImplementedException();
+                var repeatLabel = _Il.DefineLabel();
+                _Target.Put(ILExpressionNode.Label(repeatLabel));
+                return new LoopBlock(this, _BlockLevel++, repeatLabel);
             }
 
             public AssignableSymbol GetArgument(Parameter parameter)
@@ -74,12 +88,18 @@ namespace AssemblyGen
 
             public void Return()
             {
-                throw new NotImplementedException();
+                if (_ReturnType != typeof(void))
+                    throw new InvalidOperationException($"Method must return a value of type '{_ReturnType.Name}'");
+                _Target.Put(ILExpressionNode.Return());
             }
 
             public void Return(Symbol returnValue)
             {
-                throw new NotImplementedException();
+                if (_ReturnType == typeof(void))
+                    throw new InvalidOperationException($"Method of type 'void' does not return a value");
+                if (!returnValue.Type.IsAssignableTo(_ReturnType))
+                    throw new ArgumentException($"$method of type '{_ReturnType.Name}' may not return a value of type '{returnValue.Type.Name}'");
+                _Target.Put(ILExpressionNode.Return(Symbol.Take(returnValue)));
             }
 
             public ILambdaBlock<Symbol> Lambda(Type returnType, params Parameter[] parameters)
@@ -96,8 +116,10 @@ namespace AssemblyGen
                 var invocationMethod = closureTypeBuilder.DefineMethod(Identifier.Random(), MethodAttributes.Public | MethodAttributes.Virtual);
                 invocationMethod.SetParameters(parameters.Select(p => p.Type).ToArray());
                 invocationMethod.SetReturnType(returnType);
-                var block = new LambdaBlock(this, _BlockLevel++, invocationMethod, closureLocal, newClosureIl);
+                var bodyIl = invocationMethod.GetILGenerator();
+                var block = new LambdaBlock(this, _BlockLevel++, invocationMethod, bodyIl, closureLocal, newClosureIl);
                 var closure = new Closure(_Target.CurrentClosure, _ClosureLevel++, closureTypeBuilder, closureLocal, newClosureIl);
+                _Il = bodyIl;
                 _EmitList = new List<IEmittable>();
                 _ReturnType = returnType;
                 _ParameterIndices = parameters
@@ -125,6 +147,11 @@ namespace AssemblyGen
                     return statement;
                 }
 
+                public void Put(IEnumerable<IEmittable> emittables)
+                {
+                    _Ctx._EmitList.AddRange(emittables);
+                }
+
                 private class Statement : IStatement, IEmittable
                 {
                     public Statement(IILExpressionNode node)
@@ -148,16 +175,133 @@ namespace AssemblyGen
                 }
             }
 
+            private class LoopBlock : Block, ILoopBlock
+            {
+                public LoopBlock(MethodGeneratorContext ctx, int level, Label repeatLabel) : base(ctx, level)
+                {
+                    _RepeatLabel = repeatLabel;
+                    _EscapeLabel = ctx._Il.DefineLabel();
+                }
+
+                private Label _RepeatLabel;
+                private Label _EscapeLabel;
+
+                public void Break()
+                {
+                    if (HasEnded)
+                        throw new InvalidOperationException("The loop has already ended");
+                    Ctx._Target.Put(ILExpressionNode.Branch(_EscapeLabel));
+                }
+
+                public override void End()
+                {
+                    base.End();
+                    Ctx._Target.Put(ILExpressionNode.Branch(_RepeatLabel));
+                    Ctx._Target.Put(ILExpressionNode.Label(_EscapeLabel));
+                }
+            }
+
+            private class IfBlock : Block, IIfBlock<Symbol>
+            {
+                public IfBlock(MethodGeneratorContext ctx, int level, List<Branch> branches) : base(ctx, level)
+                {
+                    _OuterEmitList = ctx._EmitList;
+                    _EscapeLabel = ctx._Il.DefineLabel();
+                    _Branches = branches;
+                }
+
+                private List<IEmittable> _OuterEmitList;
+                private List<Branch> _Branches;
+                private bool _Continued = false;
+                private Label _EscapeLabel;
+
+                public void ElseIf(Symbol condition)
+                {
+                    EnsureLevel();
+                    if (condition.Type != typeof(bool))
+                        throw new ArgumentException($"{nameof(condition)} must be of type boolean");
+                    var branchBeginLabel = Ctx._Il.DefineLabel();
+                    var branchBody = new List<IEmittable>();
+                    Ctx._EmitList = _OuterEmitList;
+                    Ctx._Target.Put(ILExpressionNode.BranchTrue(Symbol.Take(condition), branchBeginLabel));
+                    Ctx._EmitList = branchBody;
+                    _Branches.Add(new Branch(branchBeginLabel, branchBody));
+                }
+
+                public IBlock Else()
+                {
+                    if (_Continued)
+                        throw new InvalidOperationException("If statement may only have one fallback else statement");
+                    _Continued = true;
+                    Ctx._EmitList = _OuterEmitList;
+                    return new ElseBlock(Ctx, EnsureLevel(), _Branches, _EscapeLabel);
+                }
+
+                public override void End()
+                {
+                    base.End();
+                    if (_Continued)
+                        throw new InvalidOperationException("This if statement is continued to an open else block. end the statement on the else block");
+                    Ctx._EmitList = _OuterEmitList;
+                    Ctx._Target.Put(ILExpressionNode.Branch(_EscapeLabel));
+                    foreach (var branch in _Branches)
+                        branch.Write(Ctx._Target, _EscapeLabel);
+                    Ctx._Target.Put(ILExpressionNode.Label(_EscapeLabel));
+                }
+            }
+
+            private class ElseBlock : Block
+            {
+                public ElseBlock(MethodGeneratorContext ctx, int level, List<Branch> branches, Label escapeLabel) : base(ctx, level)
+                {
+                    _Branches = branches;
+                    _EscapeLabel = escapeLabel;
+                }
+
+                private List<Branch> _Branches;
+                private Label _EscapeLabel;
+
+                public override void End()
+                {
+                    base.End();
+                    Ctx._Target.Put(ILExpressionNode.Branch(_EscapeLabel));
+                    foreach (var branch in _Branches)
+                        branch.Write(Ctx._Target, _EscapeLabel);
+                    Ctx._Target.Put(ILExpressionNode.Label(_EscapeLabel));
+                }
+            }
+
+            private struct Branch
+            {
+                public Label _BeginLabel;
+                public List<IEmittable> _EmitList;
+
+                public Branch(Label beginLabel, List<IEmittable> emitList)
+                {
+                    _BeginLabel = beginLabel;
+                    _EmitList = emitList;
+                }
+
+                public void Write(GeneratorTarget target, Label escapeLabel)
+                {
+                    target.Put(ILExpressionNode.Label(_BeginLabel));
+                    target.Put(_EmitList);
+                    target.Put(ILExpressionNode.Branch(escapeLabel));
+                }
+            }
+
             private class LambdaBlock : Block, ILambdaBlock<Symbol>
             {
-                public LambdaBlock(MethodGeneratorContext ctx, int level, MethodBuilder invocationMethod, LocalBuilder closureInstLocal, List<IILExpressionNode> newClosureIl) : base(ctx, level)
+                public LambdaBlock(MethodGeneratorContext ctx, int level, MethodBuilder invocationMethod, ILGenerator bodyIl, LocalBuilder closureInstLocal, List<IILExpressionNode> newClosureIl) : base(ctx, level)
                 {
                     _InvocationMethod = invocationMethod;
+                    _BodyIl = bodyIl;
                     _ClosureInstLocal = closureInstLocal;
                     _OuterEmitList = ctx._EmitList;
                     _OuterParameterIndices = ctx._ParameterIndices;
                     _OuterReturnType = ctx._ReturnType;
                     _OuterClosure = ctx._Target.CurrentClosure;
+                    _OuterIl = ctx._Il;
                     _NewClosureIl = newClosureIl;
                 }
 
@@ -167,12 +311,15 @@ namespace AssemblyGen
                 private ImmutableDictionary<Parameter, int> _OuterParameterIndices;
                 private Type _OuterReturnType;
                 private IClosure? _OuterClosure;
+                private ILGenerator _OuterIl;
                 private MethodBuilder _InvocationMethod;
+                private ILGenerator _BodyIl;
 
                 public override void End()
                 {
                     base.End();
                     var lambdaBodyEmitList = Ctx._EmitList;
+                    Ctx._Il = _OuterIl;
                     Ctx._EmitList = _OuterEmitList;
                     Ctx._ParameterIndices = _OuterParameterIndices;
                     Ctx._ReturnType = _OuterReturnType;
@@ -180,9 +327,8 @@ namespace AssemblyGen
                     var target = Ctx._Target;
                     target.CurrentClosure = _OuterClosure;
                     target.Put(ILExpressionNode.Sequential(_NewClosureIl));
-                    var bodyIl = _InvocationMethod.GetILGenerator();
                     foreach (var emittable in lambdaBodyEmitList)
-                        emittable.Emit(bodyIl);
+                        emittable.Emit(_BodyIl);
                 }
 
                 public Symbol ToDelegate(Type delegateType)
@@ -214,12 +360,17 @@ namespace AssemblyGen
 
                 public virtual void End()
                 {
+                    Ctx._BlockLevel = EnsureLevel() - 1;
+                    _HasEnded = true;
+                }
+
+                protected int EnsureLevel()
+                {
                     if (Ctx._BlockLevel < _Level || _HasEnded)
                         throw new InvalidOperationException("The block has already ended");
                     if (Ctx._BlockLevel > _Level)
                         throw new InvalidOperationException("All blocks opened after this block must end before this block may end");
-                    _HasEnded = true;
-                    Ctx._BlockLevel = _Level - 1;
+                    return _Level;
                 }
             }
 

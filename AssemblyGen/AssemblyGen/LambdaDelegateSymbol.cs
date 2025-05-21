@@ -9,7 +9,7 @@ namespace AssemblyGen
 {
     public class LambdaDelegateSymbol : Symbol
     {
-        public override Type Type => _DelegateConstructor.DeclaringType;
+        public override Type Type => _DelegateConstructor.DeclaringType!;
 
         public LambdaDelegateSymbol(IGeneratorTarget destination, IILExpressionNode delegatePtr, Type delegateType) : base(destination)
         {
