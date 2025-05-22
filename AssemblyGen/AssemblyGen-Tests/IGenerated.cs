@@ -8,7 +8,7 @@ namespace AssemblyGen_Tests
 {
     public interface IGenerated
     {
-        public void WriteText(string text, ConditionSet set);
+        public void WriteText(string text, ConditionSet set, int repititionCount);
     }
 
     public struct ConditionSet

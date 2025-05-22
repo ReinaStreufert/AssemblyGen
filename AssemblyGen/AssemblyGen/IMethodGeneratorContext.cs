@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace AssemblyGen
 {
-    public interface IMethodGeneratorContext<TSymbol, TAssignable> where TSymbol : class, ISymbol where TAssignable : class, IAssignable<TSymbol>
+    public interface IMethodGeneratorContext<TSymbol, TAssignable> where TSymbol : class, ISymbol<TSymbol> where TAssignable : class, IAssignable<TSymbol>
     {
         public TSymbol? This { get; }
         public void Return();

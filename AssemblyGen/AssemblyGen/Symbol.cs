@@ -10,7 +10,7 @@ using System.Xml.Linq;
 
 namespace AssemblyGen
 {
-    public abstract class Symbol : IMemberable<Symbol>
+    public abstract class Symbol : ISymbol<Symbol>, IMemberable<Symbol>
     {
         public static IILExpressionNode Take(Symbol symbol)
         {
@@ -80,6 +80,9 @@ namespace AssemblyGen
                 throw new ArgumentException($"No public set accessor found for property '{Type.Name}.{property.Name}'");
             Destination.Put(ILExpressionNode.Call(setter.IsStatic ? null : Take(this), setter, false, Take(value)));
         }
+
+        public Symbol Operation(UnaryOperator op) => UnaryOperationSymbol.Create(Destination, op, this);
+        public Symbol Operation(BinaryOperator op, Symbol operand) => BinaryOperationSymbol.Create(Destination, op, this, operand);
 
         protected abstract IILExpressionNode TakeAsExpressionNode();
     }

@@ -14,11 +14,20 @@ typeBuilder.AddInterfaceImplementation(typeof(IGenerated));
 
 var textParam = typeof(string).AsParameter();
 var setParam = typeof(ConditionSet).AsParameter();
+var repititionCountParam = typeof(int).AsParameter();
 typeBuilder.DefineDefaultConstructor(MethodAttributes.Public);
 var writeTextBuilder = typeBuilder.DefineMethod("WriteText.imp", MethodAttributes.Public | MethodAttributes.Virtual | MethodAttributes.NewSlot | MethodAttributes.Final, (ctx) =>
 {
     var text = ctx.GetArgument(textParam);
     var conditionSet = ctx.GetArgument(setParam);
+    var repitionCount = ctx.GetArgument(repititionCountParam);
+    var iteration = ctx.DeclareLocal(typeof(int));
+    iteration.Assign(ctx.Constant(0));
+    var repititionLoop = ctx.BeginLoop();
+    var checkEndStatement = ctx.BeginIfStatement(
+        iteration.Operation(BinaryOperator.LessThan, repitionCount).Operation(UnaryOperator.Not));
+    repititionLoop.Break();
+    checkEndStatement.End();
     var messageText = ctx.DeclareLocal(typeof(string));
     var ifStatement = ctx.BeginIfStatement(conditionSet.GetFieldOrProperty(conditionName));
     messageText.Assign(text);
@@ -27,8 +36,10 @@ var writeTextBuilder = typeBuilder.DefineMethod("WriteText.imp", MethodAttribute
     elseStatement.End();
     var console = ctx.StaticType(typeof(Console));
     console.CallMethod(nameof(Console.WriteLine), messageText);
+    iteration.Assign(iteration.Operation(BinaryOperator.Plus, ctx.Constant(1)));
+    repititionLoop.End();
     ctx.Return();
-}, typeof(void), textParam, setParam);
+}, typeof(void), textParam, setParam, repititionCountParam);
 typeBuilder.DefineMethodOverride(writeTextBuilder, typeof(IGenerated).GetMethod(nameof(IGenerated.WriteText))!);
 
 var t = typeBuilder.CreateType();
@@ -39,6 +50,6 @@ conditionSet.C = false;
 while (true)
 {
     var echoText = Console.ReadLine()!;
-    generatedInst.WriteText(echoText, conditionSet);
+    generatedInst.WriteText(echoText, conditionSet, 10);
     conditionSet.B = !conditionSet.B;
 }

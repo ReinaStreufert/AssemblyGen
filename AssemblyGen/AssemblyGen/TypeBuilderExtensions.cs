@@ -375,7 +375,7 @@ namespace AssemblyGen
 
                 public virtual void End()
                 {
-                    Ctx._BlockLevel = EnsureLevel() - 1;
+                    Ctx._BlockLevel = EnsureLevel();
                     _HasEnded = true;
                 }
 

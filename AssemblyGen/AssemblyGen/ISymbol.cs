@@ -14,7 +14,13 @@ namespace AssemblyGen
         public Type Type { get; }
     }
 
-    public interface IMemberable<TSymbol> : ISymbol where TSymbol : ISymbol
+    public interface ISymbol<TSelf> : ISymbol
+    {
+        public TSelf Operation(UnaryOperator op);
+        public TSelf Operation(BinaryOperator op, TSelf operand);
+    }
+
+    public interface IMemberable<TSymbol> : ISymbol where TSymbol : ISymbol<TSymbol>
     {
         public TSymbol CallMethod(string name, params TSymbol[] args);
         public TSymbol CallMethod(MethodInfo method, params TSymbol[] args);
@@ -48,5 +54,27 @@ namespace AssemblyGen
     public interface IStatement
     {
         public void Withdraw();
+    }
+
+    public enum BinaryOperator
+    {
+        LessThan,
+        GreaterThan,
+        EqualTo,
+        And,
+        Or,
+        Plus,
+        Minus,
+        Times,
+        Divide,
+        BitwiseAnd,
+        BitwiseOr,
+        BitwiseXor
+    }
+
+    public enum UnaryOperator
+    {
+        Not,
+        BitwiseNot
     }
 }

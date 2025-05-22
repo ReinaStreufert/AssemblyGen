@@ -34,13 +34,16 @@ namespace AssemblyGen
             Action<ILGenerator> generator = compileTimeCst switch
             {
                 null => il => il.Emit(OpCodes.Ldnull),
-                bool cst => il => il.Emit(OpCodes.Ldc_I4_S, cst ? 1 : 0),
+                bool b when b => il => il.Emit(OpCodes.Ldc_I4_1),
+                bool b when !b => il => il.Emit(OpCodes.Ldc_I4_0),
                 string cst => il => il.Emit(OpCodes.Ldstr, cst),
                 byte cst => il => il.Emit(OpCodes.Ldc_I4_S, cst),
                 sbyte cst => il => il.Emit(OpCodes.Ldc_I4_S, (byte)cst),
                 ushort cst => il => il.Emit(OpCodes.Ldc_I4, (uint)cst),
                 short cst => il => il.Emit(OpCodes.Ldc_I4, (uint)cst),
                 uint cst => il => il.Emit(OpCodes.Ldc_I4, cst),
+                int cst when cst == 0 => il => il.Emit(OpCodes.Ldc_I4_0),
+                int cst when cst == 1 => il => il.Emit(OpCodes.Ldc_I4_1),
                 int cst => il => il.Emit(OpCodes.Ldc_I4, (uint)cst),
                 ulong cst => il => il.Emit(OpCodes.Ldc_I8, cst),
                 long cst => il => il.Emit(OpCodes.Ldc_I8, (ulong)cst),
@@ -50,6 +53,36 @@ namespace AssemblyGen
                 _ => throw new ArgumentException($"value of {nameof(compileTimeCst)} cannot be a compile-time constant")
             };
             return new ILNode(generator);
+        }
+
+        private static ILNode BinaryOp(OpCode opCode, IILExpressionNode a, IILExpressionNode b)
+        {
+            return new ILNode(il =>
+            {
+                a.WriteInstructions(il);
+                b.WriteInstructions(il);
+                il.Emit(opCode);
+            });
+        }
+
+        public static ILNode Equal(IILExpressionNode a, IILExpressionNode b) => BinaryOp(OpCodes.Ceq, a, b);
+        public static ILNode Or(IILExpressionNode a, IILExpressionNode b) => BinaryOp(OpCodes.Or, a, b);
+        public static ILNode And(IILExpressionNode a, IILExpressionNode b) => BinaryOp(OpCodes.And, a, b);
+        public static ILNode Xor(IILExpressionNode a, IILExpressionNode b) => BinaryOp(OpCodes.Xor, a, b);
+        public static ILNode LessThan(IILExpressionNode a, IILExpressionNode b, bool unsigned) => BinaryOp(unsigned ? OpCodes.Clt_Un : OpCodes.Clt, a, b);
+        public static ILNode GreaterThan(IILExpressionNode a, IILExpressionNode b, bool unsigned) => BinaryOp(unsigned ? OpCodes.Cgt_Un : OpCodes.Cgt_Un, a, b);
+        public static ILNode Add(IILExpressionNode a, IILExpressionNode b, bool unsigned) => BinaryOp(unsigned ? OpCodes.Add_Ovf_Un : OpCodes.Add_Ovf, a, b);
+        public static ILNode Subtract(IILExpressionNode a, IILExpressionNode b, bool unsigned) => BinaryOp(unsigned ? OpCodes.Sub_Ovf_Un : OpCodes.Sub_Ovf, a, b);
+        public static ILNode Multiply(IILExpressionNode a, IILExpressionNode b, bool unsigned) => BinaryOp(unsigned ? OpCodes.Mul_Ovf_Un : OpCodes.Mul_Ovf, a, b);
+        public static ILNode Divide(IILExpressionNode a, IILExpressionNode b, bool unsigned) => BinaryOp(unsigned ? OpCodes.Div_Un : OpCodes.Div, a, b);
+
+        public static ILNode Compliment(IILExpressionNode a)
+        {
+            return new ILNode(il =>
+            {
+                a.WriteInstructions(il);
+                il.Emit(OpCodes.Not);
+            });
         }
 
         public static ILNode Sequential(IEnumerable<IILExpressionNode> nodes)
