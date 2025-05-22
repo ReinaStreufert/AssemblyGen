@@ -12,15 +12,16 @@ var moduleBuilder = asmBuilder.DefineDynamicModule(Identifier.Random());
 var typeBuilder = moduleBuilder.DefineType("Generated", System.Reflection.TypeAttributes.Public, null);
 typeBuilder.AddInterfaceImplementation(typeof(IGenerated));
 
-var textParam = typeof(string).AsParameter();
 var setParam = typeof(ConditionSet).AsParameter();
 var repititionCountParam = typeof(int).AsParameter();
 typeBuilder.DefineDefaultConstructor(MethodAttributes.Public);
 var writeTextBuilder = typeBuilder.DefineMethod("WriteText.imp", MethodAttributes.Public | MethodAttributes.Virtual | MethodAttributes.NewSlot | MethodAttributes.Final, (ctx) =>
 {
-    var text = ctx.GetArgument(textParam);
     var conditionSet = ctx.GetArgument(setParam);
     var repitionCount = ctx.GetArgument(repititionCountParam);
+    var textParam = typeof(string).AsParameter();
+    var lambdaBlock = ctx.BeginLambda(typeof(void), textParam);
+    var text = ctx.GetArgument(textParam);
     var iteration = ctx.DeclareLocal(typeof(int));
     iteration.Assign(ctx.Constant(0));
     var repititionLoop = ctx.BeginLoop();
@@ -39,17 +40,20 @@ var writeTextBuilder = typeBuilder.DefineMethod("WriteText.imp", MethodAttribute
     iteration.Assign(iteration.Operation(BinaryOperator.Plus, ctx.Constant(1)));
     repititionLoop.End();
     ctx.Return();
-}, typeof(void), textParam, setParam, repititionCountParam);
-typeBuilder.DefineMethodOverride(writeTextBuilder, typeof(IGenerated).GetMethod(nameof(IGenerated.WriteText))!);
+    lambdaBlock.End();
+    ctx.Return(lambdaBlock.ToDelegate(typeof(Action<string>)));
+}, typeof(Action<string>), setParam, repititionCountParam);
+typeBuilder.DefineMethodOverride(writeTextBuilder, typeof(IGenerated).GetMethod(nameof(IGenerated.WriteTextFactory))!);
 
 var t = typeBuilder.CreateType();
 var generatedInst = (IGenerated)Activator.CreateInstance(t)!;
 var conditionSet = new ConditionSet();
 conditionSet.A = true;
 conditionSet.C = false;
+var writeTextAction = generatedInst.WriteTextFactory(conditionSet, 5);
 while (true)
 {
     var echoText = Console.ReadLine()!;
-    generatedInst.WriteText(echoText, conditionSet, 10);
+    writeTextAction(echoText);
     conditionSet.B = !conditionSet.B;
 }

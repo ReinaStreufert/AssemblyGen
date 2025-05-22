@@ -168,12 +168,11 @@ namespace AssemblyGen
         public static ILMethodCallNode Call(IILExpressionNode? instance, MethodInfo method, bool preserveReturnValue = true, params IILExpressionNode[] arguments)
             => new ILMethodCallNode(instance, method, arguments, preserveReturnValue);
 
-        public static ILNode LoadVirtualFunction(IILExpressionNode instance, MethodInfo method)
+        public static ILNode LoadFunction(MethodInfo method)
         {
             return new ILNode(il =>
             {
-                instance.WriteInstructions(il);
-                il.Emit(OpCodes.Ldvirtftn, method);
+                il.Emit(OpCodes.Ldftn, method);
             });
         }
     }

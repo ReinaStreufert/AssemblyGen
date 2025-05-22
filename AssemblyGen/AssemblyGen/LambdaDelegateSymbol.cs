@@ -11,20 +11,22 @@ namespace AssemblyGen
     {
         public override Type Type => _DelegateConstructor.DeclaringType!;
 
-        public LambdaDelegateSymbol(IGeneratorTarget destination, IILExpressionNode delegatePtr, Type delegateType) : base(destination)
+        public LambdaDelegateSymbol(IGeneratorTarget destination, IILExpressionNode closureInst, IILExpressionNode invocationMethodPtr, Type delegateType) : base(destination)
         {
-            _DelegatePtr = delegatePtr;
+            _ClosureInst = closureInst;
+            _InvocationMethodPtr = invocationMethodPtr;
             _DelegateConstructor = delegateType.GetConstructors()
-                .Where(c => c.GetParameters().Length == 1)
+                .Where(c => c.GetParameters().Length == 2)
                 .First();
         }
 
-        private IILExpressionNode _DelegatePtr;
+        private IILExpressionNode _ClosureInst;
+        private IILExpressionNode _InvocationMethodPtr;
         private ConstructorInfo _DelegateConstructor;
 
         protected override IILExpressionNode TakeAsExpressionNode()
         {
-            return ILExpressionNode.NewObject(_DelegateConstructor, _DelegatePtr);
+            return ILExpressionNode.NewObject(_DelegateConstructor, _ClosureInst, _InvocationMethodPtr);
         }
     }
 }

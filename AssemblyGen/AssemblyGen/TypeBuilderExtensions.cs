@@ -109,9 +109,9 @@ namespace AssemblyGen
                 _Target.Put(ILExpressionNode.Return(Symbol.Take(returnValue)));
             }
 
-            public ILambdaBlock<Symbol> Lambda(Type returnType, params Parameter[] parameters)
+            public ILambdaBlock<Symbol> BeginLambda(Type returnType, params Parameter[] parameters)
             {
-                var closureTypeBuilder = _TypeBuilder.DefineNestedType(Identifier.Random(), TypeAttributes.NestedPrivate);
+                var closureTypeBuilder = _TypeBuilder.DefineNestedType(Identifier.Random(), TypeAttributes.NestedPrivate | TypeAttributes.Class);
                 var constructor = closureTypeBuilder.DefineDefaultConstructor(MethodAttributes.Public);
                 var closureLocal = _Il.DeclareLocal(closureTypeBuilder);
                 var newClosureIl = new List<IILExpressionNode>
@@ -120,11 +120,11 @@ namespace AssemblyGen
                         closureLocal.LocalIndex,
                         ILExpressionNode.NewObject(constructor))
                 };
-                var invocationMethod = closureTypeBuilder.DefineMethod(Identifier.Random(), MethodAttributes.Public | MethodAttributes.Virtual | MethodAttributes.NewSlot);
+                var invocationMethod = closureTypeBuilder.DefineMethod(Identifier.Random(), MethodAttributes.Public);
                 invocationMethod.SetParameters(parameters.Select(p => p.Type).ToArray());
                 invocationMethod.SetReturnType(returnType);
                 var bodyIl = invocationMethod.GetILGenerator();
-                var block = new LambdaBlock(this, _BlockLevel++, invocationMethod, bodyIl, closureLocal, newClosureIl);
+                var block = new LambdaBlock(this, _BlockLevel++, closureTypeBuilder, invocationMethod, bodyIl, closureLocal, newClosureIl);
                 var closure = new Closure(_Target.CurrentClosure, _ClosureLevel++, closureTypeBuilder, closureLocal, newClosureIl);
                 _Il = bodyIl;
                 _EmitList = new List<IEmittable>();
@@ -307,9 +307,10 @@ namespace AssemblyGen
 
             private class LambdaBlock : Block, ILambdaBlock<Symbol>
             {
-                public LambdaBlock(MethodGeneratorContext ctx, int level, MethodBuilder invocationMethod, ILGenerator bodyIl, LocalBuilder closureInstLocal, List<IILExpressionNode> newClosureIl) : base(ctx, level)
+                public LambdaBlock(MethodGeneratorContext ctx, int level, TypeBuilder closureTypeBuilder, MethodBuilder invocationMethod, ILGenerator bodyIl, LocalBuilder closureInstLocal, List<IILExpressionNode> newClosureIl) : base(ctx, level)
                 {
                     _InvocationMethod = invocationMethod;
+                    _ClosureTypeBuilder = closureTypeBuilder;
                     _BodyIl = bodyIl;
                     _ClosureInstLocal = closureInstLocal;
                     _OuterEmitList = ctx._EmitList;
@@ -327,6 +328,7 @@ namespace AssemblyGen
                 private Type _OuterReturnType;
                 private IClosure? _OuterClosure;
                 private ILGenerator _OuterIl;
+                private TypeBuilder _ClosureTypeBuilder;
                 private MethodBuilder _InvocationMethod;
                 private ILGenerator _BodyIl;
 
@@ -344,6 +346,7 @@ namespace AssemblyGen
                     target.Put(ILExpressionNode.Sequential(_NewClosureIl));
                     foreach (var emittable in lambdaBodyEmitList)
                         emittable.Emit(_BodyIl);
+                    _ClosureTypeBuilder.CreateType();
                 }
 
                 public Symbol ToDelegate(Type delegateType)
@@ -352,10 +355,11 @@ namespace AssemblyGen
                         throw new InvalidOperationException($"The lambda is still open");
                     if (!delegateType.IsAssignableTo(typeof(Delegate)))
                         throw new ArgumentException($"{nameof(delegateType)} is not a delegate type");
-                    var delegatePtr = ILExpressionNode.LoadVirtualFunction(
+                    return new LambdaDelegateSymbol(
+                        Ctx._Target, 
                         ILExpressionNode.LoadLocal(_ClosureInstLocal.LocalIndex),
-                        _InvocationMethod);
-                    return new LambdaDelegateSymbol(Ctx._Target, delegatePtr, delegateType);
+                        ILExpressionNode.LoadFunction(_InvocationMethod),
+                        delegateType);
                 }
             }
 

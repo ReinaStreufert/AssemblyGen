@@ -8,13 +8,13 @@ namespace AssemblyGen_Tests
 {
     public interface IGenerated
     {
-        public void WriteText(string text, ConditionSet set, int repititionCount);
+        public Action<string> WriteTextFactory(ConditionSet set, int repititionCount);
     }
 
-    public struct ConditionSet
+    public class ConditionSet
     {
-        public bool A;
-        public bool B;
-        public bool C;
+        public bool A { get; set; }
+        public bool B { get; set; }
+        public bool C { get; set; }
     }
 }

@@ -14,7 +14,7 @@ namespace AssemblyGen
         public TSymbol Constant(object? value);
         public TAssignable GetArgument(Parameter parameter);
         public TAssignable DeclareLocal(Type type);
-        public ILambdaBlock<TSymbol> Lambda(Type returnType, params Parameter[] parameters);
+        public ILambdaBlock<TSymbol> BeginLambda(Type returnType, params Parameter[] parameters);
         public IIfBlock<TSymbol> BeginIfStatement(TSymbol condition);
         public ILoopBlock BeginLoop();
         public IMemberable<TSymbol> StaticType(Type type);
