@@ -7,7 +7,7 @@ using System.Reflection.Emit;
 Console.Write("Set condition: ");
 var conditionName = Console.ReadLine()!.ToUpper();
 
-var asmBuilder = AssemblyBuilder.DefineDynamicAssembly(new System.Reflection.AssemblyName(Identifier.Random()), AssemblyBuilderAccess.RunAndCollect);
+var asmBuilder = AssemblyBuilder.DefineDynamicAssembly(new AssemblyName(Identifier.Random()), AssemblyBuilderAccess.RunAndCollect);
 var moduleBuilder = asmBuilder.DefineDynamicModule(Identifier.Random());
 var typeBuilder = moduleBuilder.DefineType("Generated", System.Reflection.TypeAttributes.Public, null);
 typeBuilder.AddInterfaceImplementation(typeof(IGenerated));
@@ -15,7 +15,7 @@ typeBuilder.AddInterfaceImplementation(typeof(IGenerated));
 var setParam = typeof(ConditionSet).AsParameter();
 var repititionCountParam = typeof(int).AsParameter();
 typeBuilder.DefineDefaultConstructor(MethodAttributes.Public);
-var writeTextBuilder = typeBuilder.DefineMethod("WriteText.imp", MethodAttributes.Public | MethodAttributes.Virtual | MethodAttributes.NewSlot | MethodAttributes.Final, (ctx) =>
+var writeTextBuilder = typeBuilder.DefineMethod("WriteTextFactory.imp", MethodAttributes.Public | MethodAttributes.Virtual | MethodAttributes.NewSlot | MethodAttributes.Final, (ctx) =>
 {
     var conditionSet = ctx.GetArgument(setParam);
     var repitionCount = ctx.GetArgument(repititionCountParam);

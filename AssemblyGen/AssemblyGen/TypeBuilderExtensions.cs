@@ -120,7 +120,7 @@ namespace AssemblyGen
                         closureLocal.LocalIndex,
                         ILExpressionNode.NewObject(constructor))
                 };
-                var invocationMethod = closureTypeBuilder.DefineMethod(Identifier.Random(), MethodAttributes.Public);
+                var invocationMethod = closureTypeBuilder.DefineMethod(Identifier.Random(), MethodAttributes.Assembly);
                 invocationMethod.SetParameters(parameters.Select(p => p.Type).ToArray());
                 invocationMethod.SetReturnType(returnType);
                 var bodyIl = invocationMethod.GetILGenerator();
@@ -336,6 +336,8 @@ namespace AssemblyGen
                 {
                     base.End();
                     var lambdaBodyEmitList = Ctx._EmitList;
+                    foreach (var emittable in lambdaBodyEmitList)
+                        emittable.Emit(_BodyIl);
                     Ctx._Il = _OuterIl;
                     Ctx._EmitList = _OuterEmitList;
                     Ctx._ParameterIndices = _OuterParameterIndices;
@@ -344,8 +346,7 @@ namespace AssemblyGen
                     var target = Ctx._Target;
                     target.CurrentClosure = _OuterClosure;
                     target.Put(ILExpressionNode.Sequential(_NewClosureIl));
-                    foreach (var emittable in lambdaBodyEmitList)
-                        emittable.Emit(_BodyIl);
+                    
                     _ClosureTypeBuilder.CreateType();
                 }
 

@@ -38,7 +38,7 @@ namespace AssemblyGen
             if (_ReturnType == typeof(void))
                 throw new InvalidOperationException($"The method does not return a value");
             _CallStatement.Withdraw();
-            _CallNode.PreserveReturnValue = false;
+            _CallNode.PreserveReturnValue = true;
             return _CallNode;
         }
     }
