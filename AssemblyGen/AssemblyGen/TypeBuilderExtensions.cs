@@ -22,7 +22,7 @@ namespace AssemblyGen
             return methBuilder;
         }
 
-        private class MethodGeneratorContext : IMethodGeneratorContext
+        public class MethodGeneratorContext : IMethodGeneratorContext
         {
             public Symbol? This => _IsStatic ? null : new ArgumentSymbol(_Target, 0, _TypeBuilder, 0);
 

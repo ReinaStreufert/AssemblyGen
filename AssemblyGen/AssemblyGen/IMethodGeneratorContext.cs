@@ -8,6 +8,7 @@ namespace AssemblyGen
 {
     public interface IMethodGeneratorContext<TSymbol, TAssignable> where TSymbol : class, ISymbol<TSymbol> where TAssignable : class, IAssignable<TSymbol>
     {
+        public bool IsIterator { get; }
         public TSymbol? This { get; }
         public void Return();
         public void Return(TSymbol returnValue);
