@@ -47,14 +47,10 @@ namespace AssemblyGen
 
         public Symbol Constant(object? value) => new ConstantSymbol(_Target, value);
 
-        public IMemberable<Symbol> StaticType(Type type) => new StaticMemberAccessor(type, _Target);
-
         public IIfBlock<Symbol> BeginIfStatement(Symbol condition)
         {
-            if (condition.Type != typeof(bool))
-                throw new ArgumentException($"{nameof(condition)} must be of type boolean");
             var branchBegin = _Il.DefineLabel();
-            _Target.Put(ILExpressionNode.BranchTrue(Symbol.Take(condition), branchBegin));
+            _Target.Put(ILExpressionNode.BranchTrue(Symbol.Take(condition, typeof(bool)), branchBegin));
             var branchBody = new List<IEmittable>();
             var conditionalBranch = new Branch(branchBegin, branchBody);
             var ifBlock = new IfBlock(this, _BlockLevel++, new List<Branch>() { conditionalBranch });
@@ -94,7 +90,7 @@ namespace AssemblyGen
                 throw new InvalidOperationException($"Method of type 'void' does not return a value");
             if (!returnValue.Type.IsAssignableTo(_ReturnType))
                 throw new ArgumentException($"$method of type '{_ReturnType.Name}' may not return a value of type '{returnValue.Type.Name}'");
-            _Target.Put(ILExpressionNode.Return(Symbol.Take(returnValue)));
+            _Target.Put(ILExpressionNode.Return(Symbol.Take(returnValue, _ReturnType)));
         }
 
         public ILambdaBlock<Symbol> BeginLambda(Type returnType, params Parameter[] parameters)
@@ -122,6 +118,16 @@ namespace AssemblyGen
                 .ToImmutableDictionary();
             _Target.CurrentClosure = closure;
             return block;
+        }
+
+        public void Throw(Symbol exception)
+        {
+            _Target.Put(ILExpressionNode.Throw(Symbol.Take(exception, typeof(Exception))));
+        }
+
+        public ITypeContext<Symbol> Type(Type type)
+        {
+            return new TypeContext(type, _Target);
         }
 
         protected abstract class Block : IBlock

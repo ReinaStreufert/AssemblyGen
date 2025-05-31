@@ -31,7 +31,7 @@ namespace AssemblyGen
                 var branchBeginLabel = Ctx._Il.DefineLabel();
                 var branchBody = new List<IEmittable>();
                 Ctx._EmitList = _OuterEmitList;
-                Ctx._Target.Put(ILExpressionNode.BranchTrue(Symbol.Take(condition), branchBeginLabel));
+                Ctx._Target.Put(ILExpressionNode.BranchTrue(Symbol.Take(condition, typeof(bool)), branchBeginLabel));
                 Ctx._EmitList = branchBody;
                 _Branches.Add(new Branch(branchBeginLabel, branchBody));
             }

@@ -22,10 +22,18 @@ namespace AssemblyGen
 
     public interface IMemberable<TSymbol> : ISymbol where TSymbol : ISymbol<TSymbol>
     {
-        public TSymbol CallMethod(string name, params TSymbol[] args);
-        public TSymbol CallMethod(MethodInfo method, params TSymbol[] args);
-        public TSymbol GetFieldOrProperty(string name);
-        public void SetFieldOrProperty(string name, TSymbol value);
+        public TSymbol Call(string name, params TSymbol[] args);
+        public TSymbol Call(MethodInfo method, params TSymbol[] args);
+        public TSymbol Get(string name);
+        public TSymbol Get(FieldInfo field);
+        public void Set(string name, TSymbol value);
+        public void Set(FieldInfo field, TSymbol value);
+    }
+
+    public interface ITypeContext<TSymbol> : IMemberable<TSymbol> where TSymbol : ISymbol<TSymbol>
+    {
+        public TSymbol New(params TSymbol[] args);
+        public TSymbol GetReflectedTypeObject();
     }
 
     public interface IAssignable<TSymbol> : ISymbol where TSymbol : ISymbol

@@ -11,9 +11,10 @@ namespace AssemblyGen
     {
         public static MethodCallSymbol Create(IGeneratorTarget destination, MethodInfo method, Symbol? instance, params Symbol[] arguments)
         {
-            var instanceNode = instance != null ? Take(instance) : null;
+            var instanceNode = instance != null ? Take(instance, method.DeclaringType!) : null;
+            var parameters = method.GetParameters();
             var argumentNodes = arguments
-                .Select(Take)
+                .Select((a, i) => Take(a, parameters[i].ParameterType))
                 .ToArray();
             var callNode = ILExpressionNode.Call(instanceNode, method, false, argumentNodes);
             var callStatement = destination.Put(callNode);
@@ -22,7 +23,7 @@ namespace AssemblyGen
 
         public override Type Type => _ReturnType;
 
-        private MethodCallSymbol(IGeneratorTarget destination, Type returnType, IStatement callStatement, ILMethodCallNode callNode) : base(destination)
+        private MethodCallSymbol(IGeneratorTarget destination, Type returnType, IStatement callStatement, ILExpressionNode.ILMethodCallNode callNode) : base(destination)
         {
             _ReturnType = returnType;
             _CallStatement = callStatement;
@@ -31,7 +32,7 @@ namespace AssemblyGen
 
         private Type _ReturnType;
         private IStatement _CallStatement;
-        private ILMethodCallNode _CallNode;
+        private ILExpressionNode.ILMethodCallNode _CallNode;
 
         protected override IILExpressionNode ToExpressionNode()
         {

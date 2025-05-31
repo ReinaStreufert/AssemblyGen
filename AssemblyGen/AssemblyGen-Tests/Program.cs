@@ -30,13 +30,13 @@ var writeTextBuilder = typeBuilder.DefineMethod("WriteTextFactory.imp", MethodAt
     repititionLoop.Break();
     checkEndStatement.End();
     var messageText = ctx.DeclareLocal(typeof(string));
-    var ifStatement = ctx.BeginIfStatement(conditionSet.GetFieldOrProperty(conditionName));
+    var ifStatement = ctx.BeginIfStatement(conditionSet.Get(conditionName));
     messageText.Assign(text);
     var elseStatement = ifStatement.Else();
     messageText.Assign(ctx.Constant("hidden"));
     elseStatement.End();
-    var console = ctx.StaticType(typeof(Console));
-    console.CallMethod(nameof(Console.WriteLine), messageText);
+    var console = ctx.Type(typeof(Console));
+    console.Call(nameof(Console.WriteLine), messageText);
     iteration.Assign(iteration.Operation(BinaryOperator.Plus, ctx.Constant(1)));
     repititionLoop.End();
     ctx.Return();

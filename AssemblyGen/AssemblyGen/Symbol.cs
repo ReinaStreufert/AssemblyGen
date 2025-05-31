@@ -12,9 +12,11 @@ namespace AssemblyGen
 {
     public abstract class Symbol : ISymbol<Symbol>, IMemberable<Symbol>
     {
-        public static IILExpressionNode Take(Symbol symbol)
+        public static IILExpressionNode Take(Symbol symbol, Type toType)
         {
-            return symbol.TakeAsExpressionNode();
+            if (!symbol.Type.IsAssignableTo(toType))
+                throw new ArgumentException($"value of type '{symbol.Type.Name}' cannot be used in expression expecting type '{toType}'");
+            return ILExpressionNode.ConvertImplicit(symbol.TakeAsExpressionNode(), symbol.Type, toType);
         }
 
         public abstract Type Type { get; }
@@ -26,7 +28,7 @@ namespace AssemblyGen
 
         protected IGeneratorTarget Destination { get; }
 
-        public Symbol CallMethod(string name, params Symbol[] args)
+        public Symbol Call(string name, params Symbol[] args)
         {
             var argTypes = args
                 .Select(a => a.Type)
@@ -37,9 +39,9 @@ namespace AssemblyGen
             return MethodCallSymbol.Create(Destination, method, method.IsStatic ? null: this, args);
         }
 
-        public Symbol CallMethod(MethodInfo method, params Symbol[] args)
+        public Symbol Call(MethodInfo method, params Symbol[] args)
         {
-            if (method.DeclaringType != Type)
+            if (!Type.IsAssignableTo(method.DeclaringType))
                 throw new ArgumentException(nameof(method));
             var argTypes = args
                 .Select(a => a.Type)
@@ -50,7 +52,7 @@ namespace AssemblyGen
             return MethodCallSymbol.Create(Destination, matchedMethod, matchedMethod.IsStatic ? null : this, args);
         }
 
-        public Symbol GetFieldOrProperty(string name)
+        public Symbol Get(string name)
         {
             var field = Type.GetField(name);
             if (field != null)
@@ -62,23 +64,31 @@ namespace AssemblyGen
             return MethodCallSymbol.Create(Destination, getter, getter.IsStatic ? null : this);
         }
 
-        public void SetFieldOrProperty(string name, Symbol value)
+        public Symbol Get(FieldInfo field)
+        {
+            if (!Type.IsAssignableTo(field.DeclaringType))
+                throw new ArgumentException(nameof(field));
+            return FieldGetSymbol.Create(Destination, field.IsStatic ? null : this, field);
+        }
+
+        public void Set(string name, Symbol value)
         {
             var field = Type.GetField(name);
             if (field != null)
             {
-                if (!value.Type.IsAssignableTo(field.FieldType))
-                    throw new ArgumentException($"type '{value.Type.Name}' is not assignable to field of type '{field.FieldType.Name}'");
-                Destination.Put(ILExpressionNode.StoreField(field.IsStatic ? null : Take(this), field, Take(value)));
+                Destination.Put(ILExpressionNode.StoreField(field.IsStatic ? null : Take(this, field.DeclaringType!), field, Take(value, field.FieldType)));
                 return;
             }
             var property = Type.GetProperty(name) ??
                 throw new ArgumentException($"No field or property found '{Type.Name}.{name}'");
-            if (!value.Type.IsAssignableTo(property.PropertyType))
-                throw new ArgumentException($"type '{value.Type.Name}' is not assignable to property of type '{property.PropertyType.Name}'");
             var setter = property.GetSetMethod() ??
                 throw new ArgumentException($"No public set accessor found for property '{Type.Name}.{property.Name}'");
-            Destination.Put(ILExpressionNode.Call(setter.IsStatic ? null : Take(this), setter, false, Take(value)));
+            Destination.Put(ILExpressionNode.Call(setter.IsStatic ? null : Take(this, property.DeclaringType!), setter, false, Take(value, property.PropertyType!)));
+        }
+
+        public void Set(FieldInfo field, Symbol value)
+        {
+            Destination.Put(ILExpressionNode.StoreField(field.IsStatic ? null : Take(this, field.DeclaringType!), field, Take(value, field.FieldType)));
         }
 
         public Symbol Operation(UnaryOperator op) => UnaryOperationSymbol.Create(Destination, op, this);

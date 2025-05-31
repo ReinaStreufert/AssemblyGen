@@ -10,6 +10,18 @@ namespace AssemblyGen
 {
     public static class ILExpressionNode
     {
+        private static readonly Type[] _IntegerTypes =
+        {
+            typeof(byte),
+            typeof(sbyte),
+            typeof(short),
+            typeof(ushort),
+            typeof(int),
+            typeof(uint),
+            typeof(long),
+            typeof(ulong)
+        };
+
         public static ILNode Branch(Label destination)
         {
             return new ILNode(il => il.Emit(OpCodes.Br, destination));
@@ -98,7 +110,7 @@ namespace AssemblyGen
         {
             return new ILNode(il =>
             {
-                foreach (var arg in arguments)
+                foreach (var arg in FillDefaultedParameters(constructor.GetParameters(), arguments))
                     arg.WriteInstructions(il);
                 il.Emit(OpCodes.Newobj, constructor);
             });
@@ -175,49 +187,32 @@ namespace AssemblyGen
                 il.Emit(OpCodes.Ldftn, method);
             });
         }
-    }
 
-    public class ILNode : IILExpressionNode
-    {
-        public ILNode(Action<ILGenerator> generatorCallback)
+        public static ILNode Throw(IILExpressionNode exception)
         {
-            _Callback = generatorCallback;
+            return new ILNode(il =>
+            {
+                exception.WriteInstructions(il);
+                il.Emit(OpCodes.Throw);
+            });
         }
 
-        private Action<ILGenerator> _Callback;
+        public static ILNode LoadToken(int metadataToken) => new ILNode(il => il.Emit(OpCodes.Ldtoken, metadataToken));
 
-        public void WriteInstructions(ILGenerator il)
+        public static IILExpressionNode ConvertImplicit(IILExpressionNode value, Type fromType, Type toType)
         {
-            _Callback(il);
-        }
-    }
-
-    public class ILMethodCallNode : IILExpressionNode
-    {
-        public IILExpressionNode? Instance { get; }
-        public MethodInfo Method { get; }
-        public IILExpressionNode[] Arguments { get; }
-        public bool PreserveReturnValue { get; set; }
-
-        public ILMethodCallNode(IILExpressionNode? instance, MethodInfo method, IILExpressionNode[] arguments, bool preserveReturnVal = true)
-        {
-            if ((instance == null) != method.IsStatic)
-                throw new ArgumentException(nameof(instance));
-            Instance = instance;
-            Method = method;
-            Arguments = FillDefaultedParameters( method.GetParameters(), arguments);
-            PreserveReturnValue = preserveReturnVal;
-        }
-
-        public void WriteInstructions(ILGenerator il)
-        {
-            if (Instance != null)
-                Instance.WriteInstructions(il);
-            foreach (var arg in Arguments)
-                arg.WriteInstructions(il);
-            il.Emit(OpCodes.Call, Method);
-            if (!PreserveReturnValue && Method.ReturnType != typeof(void))
-                il.Emit(OpCodes.Pop);
+            if (!fromType.IsAssignableTo(toType))
+                throw new ArgumentException();
+            if (toType == typeof(object) && fromType.IsValueType)
+            {
+                return new ILNode(il =>
+                {
+                    value.WriteInstructions(il);
+                    il.Emit(OpCodes.Box);
+                });
+            }
+            // todo: implicit integer conversions
+            return value;
         }
 
         private static IILExpressionNode[] FillDefaultedParameters(ParameterInfo[] methodParameters, IILExpressionNode[] arguments)
@@ -241,6 +236,50 @@ namespace AssemblyGen
                 result[i] = ILExpressionNode.Constant(parameter.RawDefaultValue);
             }
             return result;
+        }
+
+        public class ILNode : IILExpressionNode
+        {
+            public ILNode(Action<ILGenerator> generatorCallback)
+            {
+                _Callback = generatorCallback;
+            }
+
+            private Action<ILGenerator> _Callback;
+
+            public void WriteInstructions(ILGenerator il)
+            {
+                _Callback(il);
+            }
+        }
+
+        public class ILMethodCallNode : IILExpressionNode
+        {
+            public IILExpressionNode? Instance { get; }
+            public MethodInfo Method { get; }
+            public IILExpressionNode[] Arguments { get; }
+            public bool PreserveReturnValue { get; set; }
+
+            public ILMethodCallNode(IILExpressionNode? instance, MethodInfo method, IILExpressionNode[] arguments, bool preserveReturnVal = true)
+            {
+                if ((instance == null) != method.IsStatic)
+                    throw new ArgumentException(nameof(instance));
+                Instance = instance;
+                Method = method;
+                Arguments = FillDefaultedParameters(method.GetParameters(), arguments);
+                PreserveReturnValue = preserveReturnVal;
+            }
+
+            public void WriteInstructions(ILGenerator il)
+            {
+                if (Instance != null)
+                    Instance.WriteInstructions(il);
+                foreach (var arg in Arguments)
+                    arg.WriteInstructions(il);
+                il.Emit(OpCodes.Call, Method);
+                if (!PreserveReturnValue && Method.ReturnType != typeof(void))
+                    il.Emit(OpCodes.Pop);
+            }
         }
     }
 }

@@ -1,38 +1,64 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Reflection.Emit;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
+
 namespace AssemblyGen
 {
     public class IteratorGeneratorContext : MethodGeneratorContext
     {
-        public override Symbol? This => _ThisField == null ? null : FieldGetSymbol.Create(_Target, _EnumeratorInst, _ThisField);
+        public override Symbol? This => _ThisField == null ? null : _EnumerableInst.Get(_ThisField);
 
-        public IteratorGeneratorContext(TypeBuilder typeBuilder, ILGenerator il, Type returnType, Parameter[] parameters, FieldBuilder? thisField) : base(typeBuilder, il, returnType, parameters, thisField == null)
+        public IteratorGeneratorContext(TypeBuilder typeBuilder, ILGenerator il, Type returnType, ImmutableDictionary<Parameter, FieldBuilder> parameters, FieldBuilder currentItemField, FieldBuilder iterationStateField, FieldBuilder enumerableField, FieldBuilder? thisField) : base(typeBuilder, il, returnType, new Parameter[] { }, thisField == null)
         {
             // typeBuilder represents the IEnumerator implementation
             // il represents MoveNext implementation
             // returnType represents element type, aka return type of Current property
             // thisField represents field on IEnumerator implementation which stores the instance on which the IEnumerable-instantiator method was called
+            var enumerableInst = base.DeclareLocal(enumerableField.FieldType);
+            enumerableInst.Assign(_EnumeratorInst.Get(enumerableField));
+            _EnumerableInst = enumerableInst;
             _ThisField = thisField;
-            _IterationStateField = typeBuilder.DefineField(Identifier.Random(), typeof(int), System.Reflection.FieldAttributes.Public);
-            _CurrentItemField = typeBuilder.DefineField(Identifier.Random(), returnType, System.Reflection.FieldAttributes.Public);
+            _IterationStateField = iterationStateField;
+            _CurrentItemField = currentItemField;
+            _EnumerableField = enumerableField;
+            _LoadedParameterLocals = LoadParameterFields(parameters).ToImmutableDictionary();
+            _Target.Put(new RestoreStateExpressionNode(this));
         }
 
         private Symbol _EnumeratorInst => base.This!;
+        private Symbol _EnumerableInst;
+
         private FieldBuilder? _ThisField;
         private FieldBuilder _CurrentItemField;
         private FieldBuilder _IterationStateField;
+        private FieldBuilder _EnumerableField;
+        private ImmutableDictionary<Parameter, AssignableSymbol> _LoadedParameterLocals;
         private List<KeyValuePair<int, FieldBuilder>> _LocalStateFields = new List<KeyValuePair<int, FieldBuilder>>();
         private List<Label> _YieldStateLabels = new List<Label>();
 
-        public override void Flush()
+        private IEnumerable<KeyValuePair<Parameter, AssignableSymbol>> LoadParameterFields(IEnumerable<KeyValuePair<Parameter, FieldBuilder>> parameters)
         {
-            base.Flush();
+            foreach (var pair in parameters)
+            {
+                var local = base.DeclareLocal(pair.Key.Type);
+                local.Assign(_EnumerableInst.Get(pair.Value));
+                yield return new KeyValuePair<Parameter, AssignableSymbol>(pair.Key, local);
+            }
+        }
+
+        public override AssignableSymbol GetArgument(Parameter parameter)
+        {
+            if (_ClosureLevel > 0)
+                return base.GetArgument(parameter);
+            if (!_LoadedParameterLocals.TryGetValue(parameter, out var argumentLocal))
+                throw new ArgumentException($"{nameof(parameter)} was not declared in the method signature");
+            return argumentLocal;
         }
 
         public override AssignableSymbol DeclareLocal(Type type)
@@ -55,8 +81,8 @@ namespace AssemblyGen
             var yieldResumeLabel = _Il.DefineLabel();
             _YieldStateLabels.Add(yieldResumeLabel);
             _Target.Put(new SaveStateExpressionNode(this, _YieldStateLabels.Count));
-            _Target.Put(ILExpressionNode.StoreField(ILExpressionNode.LoadThis, _CurrentItemField, Symbol.Take(returnValue)));
-            _Target.Put(ILExpressionNode.Return(ILExpressionNode.Constant(true)));
+            _EnumeratorInst.Set(_CurrentItemField, returnValue);
+            base.Return(Constant(true));
             _Target.Put(ILExpressionNode.Label(yieldResumeLabel));
         }
 
@@ -67,15 +93,15 @@ namespace AssemblyGen
                 base.Return();
                 return;
             }
-            _Target.Put(ILExpressionNode.StoreField(ILExpressionNode.LoadThis, _IterationStateField, ILExpressionNode.Constant(-1)));
-            _Target.Put(ILExpressionNode.Return(ILExpressionNode.Constant(false)));
+            _EnumeratorInst.Set(_IterationStateField, Constant(-1));
+            base.Return(Constant(false));
         }
 
         private class SaveStateExpressionNode : IILExpressionNode
         {
-            // eiteration state field key
+            // iteration state field key
             // =0: iterator begin
-            // >0: yield state; one-based index of _YieldStateLevels representing entry point to resume iteration from
+            // >0: yield state; one-based index of _YieldStateLabels representing entry point to resume iteration from
             // <0: iterator sequence has ended
 
             public SaveStateExpressionNode(IteratorGeneratorContext genCtx, int iterationStateIndex)

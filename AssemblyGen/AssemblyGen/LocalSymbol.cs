@@ -33,9 +33,9 @@ namespace AssemblyGen
             if (!value.Type.IsAssignableTo(Type))
                 throw new ArgumentException($"Type '{value.Type.Name}' is not assignable to local of type '{Type.Name}'");
             var closure = Destination.CurrentClosure;
-            ILNode storeNode = closure != null && closure.Level >= _ContainerClosureLevel ? 
-                ILExpressionNode.StoreField(ILExpressionNode.LoadThis, closure.CaptureLocal(_LocalBuilder.LocalIndex, _ContainerClosureLevel, Type), Take(value)) :
-                ILExpressionNode.StoreLocal(_LocalBuilder.LocalIndex, Take(value));
+            var storeNode = closure != null && closure.Level >= _ContainerClosureLevel ? 
+                ILExpressionNode.StoreField(ILExpressionNode.LoadThis, closure.CaptureLocal(_LocalBuilder.LocalIndex, _ContainerClosureLevel, Type), Take(value, Type)) :
+                ILExpressionNode.StoreLocal(_LocalBuilder.LocalIndex, Take(value, Type));
             Destination.Put(storeNode);
         }
     }

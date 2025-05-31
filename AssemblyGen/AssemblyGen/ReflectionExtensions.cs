@@ -18,6 +18,13 @@ namespace AssemblyGen
                 .FirstOrDefault();
         }
 
+        public static ConstructorInfo? MatchConstructor(this Type type, params Type[] argumentTypes)
+        {
+            return type.GetConstructors(BindingFlags.Public)
+                .Where(c => c.IsMatch(argumentTypes))
+                .FirstOrDefault();
+        }
+
         public static MethodInfo? TryMatchMethod(this MethodInfo method, params Type[] argumentTypes)
         {
             var genericDict = method.ContainsGenericParameters ? new Dictionary<Type, Type>() : null;
@@ -52,6 +59,24 @@ namespace AssemblyGen
                     return null;
             }
             return method;
+        }
+
+        public static bool IsMatch(this ConstructorInfo constructor, params Type[] argumentTypes)
+        {
+            var parameters = constructor.GetParameters();
+            if (argumentTypes.Length > parameters.Length)
+                return false;
+            for (int i = 0; i < parameters.Length; i++)
+            {
+                var parameter = parameters[i];
+                if (i < argumentTypes.Length)
+                {
+                    if (!argumentTypes[i].IsAssignableTo(parameter.ParameterType))
+                        return false;
+                }
+                else return parameter.HasDefaultValue;
+            }
+            return true;
         }
 
         private static Type? TryFindCommonAncestor(this Type a, Type b)

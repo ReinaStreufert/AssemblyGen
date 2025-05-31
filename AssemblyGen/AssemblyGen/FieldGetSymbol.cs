@@ -11,7 +11,7 @@ namespace AssemblyGen
     {
         public static FieldGetSymbol Create(IGeneratorTarget destination, Symbol? instance, FieldInfo field)
         {
-            var instanceNode = instance == null ? null : Take(instance);
+            var instanceNode = instance == null ? null : Take(instance, field.DeclaringType!);
             return new FieldGetSymbol(destination, instanceNode, field);
         }
 

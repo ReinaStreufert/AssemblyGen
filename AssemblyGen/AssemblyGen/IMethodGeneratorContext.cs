@@ -18,7 +18,8 @@ namespace AssemblyGen
         public ILambdaBlock<TSymbol> BeginLambda(Type returnType, params Parameter[] parameters);
         public IIfBlock<TSymbol> BeginIfStatement(TSymbol condition);
         public ILoopBlock BeginLoop();
-        public IMemberable<TSymbol> StaticType(Type type);
+        public void Throw(Symbol exception);
+        public ITypeContext<TSymbol> Type(Type type);
     }
 
     public interface IMethodGeneratorContext : IMethodGeneratorContext<Symbol, AssignableSymbol>
