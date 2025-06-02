@@ -13,8 +13,9 @@ namespace AssemblyGen
     public class IteratorGeneratorContext : MethodGeneratorContext
     {
         public override Symbol? This => _ThisField == null ? null : _EnumerableInst.Get(_ThisField);
+        public override bool IsIterator => true;
 
-        public IteratorGeneratorContext(TypeBuilder typeBuilder, ILGenerator il, Type returnType, ImmutableDictionary<Parameter, FieldBuilder> parameters, FieldBuilder currentItemField, FieldBuilder iterationStateField, FieldBuilder enumerableField, FieldBuilder? thisField) : base(typeBuilder, il, returnType, new Parameter[] { }, thisField == null)
+        public IteratorGeneratorContext(TypeBuilder typeBuilder, ILGenerator il, Type returnType, ImmutableDictionary<Parameter, FieldBuilder> parameters, FieldBuilder currentItemField, FieldBuilder iterationStateField, FieldBuilder enumerableField, FieldBuilder? thisField) : base(typeBuilder, il, returnType, new Parameter[] { }, false)
         {
             // typeBuilder represents the IEnumerator implementation
             // il represents MoveNext implementation
@@ -26,7 +27,6 @@ namespace AssemblyGen
             _ThisField = thisField;
             _IterationStateField = iterationStateField;
             _CurrentItemField = currentItemField;
-            _EnumerableField = enumerableField;
             _LoadedParameterLocals = LoadParameterFields(parameters).ToImmutableDictionary();
             _Target.Put(new RestoreStateExpressionNode(this));
         }
@@ -37,7 +37,6 @@ namespace AssemblyGen
         private FieldBuilder? _ThisField;
         private FieldBuilder _CurrentItemField;
         private FieldBuilder _IterationStateField;
-        private FieldBuilder _EnumerableField;
         private ImmutableDictionary<Parameter, AssignableSymbol> _LoadedParameterLocals;
         private List<KeyValuePair<int, FieldBuilder>> _LocalStateFields = new List<KeyValuePair<int, FieldBuilder>>();
         private List<Label> _YieldStateLabels = new List<Label>();
@@ -82,7 +81,7 @@ namespace AssemblyGen
             _YieldStateLabels.Add(yieldResumeLabel);
             _Target.Put(new SaveStateExpressionNode(this, _YieldStateLabels.Count));
             _EnumeratorInst.Set(_CurrentItemField, returnValue);
-            base.Return(Constant(true));
+            _Target.Put(ILExpressionNode.Return(ILExpressionNode.Constant(true)));
             _Target.Put(ILExpressionNode.Label(yieldResumeLabel));
         }
 
@@ -94,7 +93,7 @@ namespace AssemblyGen
                 return;
             }
             _EnumeratorInst.Set(_IterationStateField, Constant(-1));
-            base.Return(Constant(false));
+            _Target.Put(ILExpressionNode.Return(ILExpressionNode.Constant(false)));
         }
 
         private class SaveStateExpressionNode : IILExpressionNode

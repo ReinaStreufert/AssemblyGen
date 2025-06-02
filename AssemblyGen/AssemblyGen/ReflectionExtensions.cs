@@ -11,16 +11,26 @@ namespace AssemblyGen
     {
         public static MethodInfo? MatchMethod(this Type type, string methodName, params Type[] argumentTypes)
         {
-            return type.GetMethods(BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.FlattenHierarchy)
+            var method = type.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance | BindingFlags.FlattenHierarchy)
                 .Where(m => m.Name == methodName)
                 .Select(m => TryMatchMethod(m, argumentTypes))
                 .Where(m => m != null)
                 .FirstOrDefault();
+            if (method == null)
+            {
+                method = type.GetInterfaces()
+                    .SelectMany(i => i.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.FlattenHierarchy))
+                    .Where(m => m.Name == methodName)
+                    .Select(m => TryMatchMethod(m, argumentTypes))
+                    .Where(m => m != null)
+                    .FirstOrDefault();
+            }
+            return method;
         }
 
         public static ConstructorInfo? MatchConstructor(this Type type, params Type[] argumentTypes)
         {
-            return type.GetConstructors(BindingFlags.Public)
+            return type.GetConstructors(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static)
                 .Where(c => c.IsMatch(argumentTypes))
                 .FirstOrDefault();
         }

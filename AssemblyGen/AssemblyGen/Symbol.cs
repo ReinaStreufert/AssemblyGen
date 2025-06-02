@@ -43,13 +43,7 @@ namespace AssemblyGen
         {
             if (!Type.IsAssignableTo(method.DeclaringType))
                 throw new ArgumentException(nameof(method));
-            var argTypes = args
-                .Select(a => a.Type)
-                .ToArray();
-            var matchedMethod = method.TryMatchMethod(argTypes);
-            if (matchedMethod == null)
-                throw new ArgumentException($"Argument types do not match {nameof(method)}");
-            return MethodCallSymbol.Create(Destination, matchedMethod, matchedMethod.IsStatic ? null : this, args);
+            return MethodCallSymbol.Create(Destination, method, method.IsStatic ? null : this, args);
         }
 
         public Symbol Get(string name)

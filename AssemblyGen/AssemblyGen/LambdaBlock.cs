@@ -61,10 +61,10 @@ namespace AssemblyGen
                     throw new InvalidOperationException($"The lambda is still open");
                 if (!delegateType.IsAssignableTo(typeof(Delegate)))
                     throw new ArgumentException($"{nameof(delegateType)} is not a delegate type");
-                return new LambdaDelegateSymbol(
+                return new DelegateSymbol(
                     Ctx._Target,
                     ILExpressionNode.LoadLocal(_ClosureInstLocal.LocalIndex),
-                    ILExpressionNode.LoadFunction(_InvocationMethod),
+                    _InvocationMethod,
                     delegateType);
             }
         }

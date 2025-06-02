@@ -15,8 +15,8 @@ namespace AssemblyGen
                 .FirstOrDefault();
             if (mapping == null)
                 throw new ArgumentException($"{nameof(binaryOp)} does not match operand types");
-            var a = Take(operandA);
-            var b = Take(operandB);
+            var a = Take(operandA, operandA.Type);
+            var b = Take(operandB, operandB.Type);
             return new BinaryOperationSymbol(destination, mapping.OpNodeFunc(a, b), mapping.ResultType);
         }
 

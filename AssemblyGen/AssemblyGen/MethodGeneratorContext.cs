@@ -130,6 +130,20 @@ namespace AssemblyGen
             return new TypeContext(type, _Target);
         }
 
+        public Symbol Delegate(MethodInfo method, Type delegateType, Symbol? instance = null)
+        {
+            if (!delegateType.IsAssignableTo(typeof(Delegate)))
+                throw new ArgumentException(nameof(delegateType));
+            if (!method.IsStatic && instance == null)
+                throw new ArgumentException(nameof(instance));
+            return new DelegateSymbol(_Target, instance == null ? null : Symbol.Take(instance, method.DeclaringType!), method, delegateType);
+        }
+
+        public Symbol New(ConstructorInfo constructor, params Symbol[] arguments)
+        {
+            return new ConstructorCallSymbol(_Target, constructor, arguments);
+        }
+
         protected abstract class Block : IBlock
         {
             public bool HasEnded => _HasEnded;

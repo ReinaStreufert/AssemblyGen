@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -20,6 +21,8 @@ namespace AssemblyGen
         public ILoopBlock BeginLoop();
         public void Throw(Symbol exception);
         public ITypeContext<TSymbol> Type(Type type);
+        public TSymbol New(ConstructorInfo constructor, params Symbol[] arguments);
+        public TSymbol Delegate(MethodInfo method, Type delegateType, Symbol? instance);
     }
 
     public interface IMethodGeneratorContext : IMethodGeneratorContext<Symbol, AssignableSymbol>

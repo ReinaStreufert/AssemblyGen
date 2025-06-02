@@ -7,26 +7,26 @@ using System.Threading.Tasks;
 
 namespace AssemblyGen
 {
-    public class LambdaDelegateSymbol : Symbol
+    public class DelegateSymbol : Symbol
     {
         public override Type Type => _DelegateConstructor.DeclaringType!;
 
-        public LambdaDelegateSymbol(IGeneratorTarget destination, IILExpressionNode closureInst, IILExpressionNode invocationMethodPtr, Type delegateType) : base(destination)
+        public DelegateSymbol(IGeneratorTarget destination, IILExpressionNode? inst, MethodInfo invocationMethod, Type delegateType) : base(destination)
         {
-            _ClosureInst = closureInst;
-            _InvocationMethodPtr = invocationMethodPtr;
+            _Inst = inst ?? ILExpressionNode.Constant(null);
+            _InvocationMethod = invocationMethod;
             _DelegateConstructor = delegateType.GetConstructors()
                 .Where(c => c.GetParameters().Length == 2)
                 .First();
         }
 
-        private IILExpressionNode _ClosureInst;
-        private IILExpressionNode _InvocationMethodPtr;
+        private IILExpressionNode _Inst;
+        private MethodInfo _InvocationMethod;
         private ConstructorInfo _DelegateConstructor;
 
         protected override IILExpressionNode TakeAsExpressionNode()
         {
-            return ILExpressionNode.NewObject(_DelegateConstructor, _ClosureInst, _InvocationMethodPtr);
+            return ILExpressionNode.NewObject(_DelegateConstructor, _Inst, ILExpressionNode.LoadFunction(_InvocationMethod));
         }
     }
 }

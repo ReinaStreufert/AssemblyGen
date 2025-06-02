@@ -16,7 +16,7 @@ namespace AssemblyGen
                 .FirstOrDefault();
             if (mapping == null)
                 throw new ArgumentException($"{nameof(unaryOp)} does not match {nameof(operand)}");
-            return new UnaryOperationSymbol(destination, mapping.OpNodeFunc(Take(operand)), mapping.ResultType ?? operand.Type);
+            return new UnaryOperationSymbol(destination, mapping.OpNodeFunc(Take(operand, operand.Type)), mapping.ResultType ?? operand.Type);
         }
 
         private static readonly UnaryOperatorMapping[] _Mappings = new UnaryOperatorMapping[]
