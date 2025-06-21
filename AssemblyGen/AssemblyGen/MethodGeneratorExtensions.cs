@@ -11,6 +11,9 @@ namespace AssemblyGen
 {
     public static class MethodGeneratorExtensions
     {
+        private static AssemblyBuilder? _DynamicAsm;
+        private static ModuleBuilder? _DynamicModule;
+
         public static ILoopBlock BeginForeachLoop(this IMethodGeneratorContext context, Symbol enumerable, out AssignableSymbol currentItem)
         {
             if (!enumerable.Type.IsAssignableTo(typeof(IEnumerable)))
@@ -37,8 +40,13 @@ namespace AssemblyGen
 
         public static TDelegate Compile<TDelegate>(this MethodGenerator methodGenerator, Type returnType, params Parameter[] parameters) where TDelegate : Delegate
         {
-            var asmBuilder = AssemblyBuilder.DefineDynamicAssembly(new AssemblyName(Identifier.Random()), AssemblyBuilderAccess.Run);
-            var moduleBuilder = asmBuilder.DefineDynamicModule(Identifier.Random());
+            if (_DynamicAsm == null)
+            {
+                _DynamicAsm = AssemblyBuilder.DefineDynamicAssembly(new AssemblyName(Identifier.Random()), AssemblyBuilderAccess.Run);
+                _DynamicModule = _DynamicAsm.DefineDynamicModule(Identifier.Random());
+            }
+            var asmBuilder = _DynamicAsm;
+            var moduleBuilder = _DynamicModule!;
             var typeBuilder = moduleBuilder.DefineType(Identifier.Random(), TypeAttributes.Public);
             typeBuilder.AddInterfaceImplementation(typeof(IRuntimeInvocationProvider));
             var meth = typeBuilder.DefineMethod(Identifier.Random(), MethodAttributes.Public | MethodAttributes.Static, methodGenerator, returnType, parameters);
@@ -52,7 +60,7 @@ namespace AssemblyGen
             return (TDelegate)invocationProvider.GetDelegate();
         }
 
-        public static TDelegate CompileIterator<TDelegate>(this MethodGenerator methodGenerator, Type elementType, params Parameter[] parameters) where TDelegate : Delegate
+        /*public static TDelegate CompileIterator<TDelegate>(this MethodGenerator methodGenerator, Type elementType, params Parameter[] parameters) where TDelegate : Delegate
         {
             var asmBuilder = AssemblyBuilder.DefineDynamicAssembly(new AssemblyName(Identifier.Random()), AssemblyBuilderAccess.Run);
             var moduleBuilder = asmBuilder.DefineDynamicModule(Identifier.Random());
@@ -67,6 +75,6 @@ namespace AssemblyGen
             var generatedType = typeBuilder.CreateType();
             var invocationProvider = (IRuntimeInvocationProvider)Activator.CreateInstance(generatedType)!;
             return (TDelegate)invocationProvider.GetDelegate();
-        }
+        }*/
     }
 }

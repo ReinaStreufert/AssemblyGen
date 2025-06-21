@@ -28,13 +28,21 @@ MethodGenerator testIteratorGenerator = ctx =>
     ctx.Return();
 };
 
-var testIterator = testIteratorGenerator.CompileIterator<Func<int, int, IEnumerable<int>, IEnumerable<int>>>
+var persistedAssembly = new PersistedAssemblyBuilder(new AssemblyName("IteratorDebugPersistsed"), Assembly.GetAssembly(typeof(object))!);
+var module = persistedAssembly.DefineDynamicModule(Identifier.Random());
+var typeBuilder = module.DefineType("IteratorDebug");
+typeBuilder.DefineIterator("TestIterator", MethodAttributes.Public | MethodAttributes.Static, testIteratorGenerator, typeof(int), additiveAParam, additiveBParam, inputNumbersParam);
+typeBuilder.CreateType();
+persistedAssembly.Save("IteratorDebugPersisted.dll");
+
+/*var testIterator = testIteratorGenerator.CompileIterator<Func<int, int, IEnumerable<int>, IEnumerable<int>>>
     (typeof(int), additiveAParam, additiveBParam, inputNumbersParam);
 
 var myNumbers = new int[10];
 for (int i = 0; i < myNumbers.Length; i++)
     myNumbers[i] = i;
 
-foreach (var n in testIterator(10, -10, myNumbers))
-    Console.WriteLine(n);
-Console.ReadLine();
+var enumerable = testIterator(10, -10, myNumbers);
+var enumerator = enumerable.GetEnumerator();
+while (enumerator.MoveNext())
+    Console.WriteLine(enumerator.Current);*/

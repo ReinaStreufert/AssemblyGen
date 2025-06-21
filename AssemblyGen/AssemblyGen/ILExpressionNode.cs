@@ -208,7 +208,7 @@ namespace AssemblyGen
                 return new ILNode(il =>
                 {
                     value.WriteInstructions(il);
-                    il.Emit(OpCodes.Box);
+                    il.Emit(OpCodes.Box, fromType);
                 });
             }
             // todo: implicit integer conversions

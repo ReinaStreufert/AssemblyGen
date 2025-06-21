@@ -77,10 +77,10 @@ namespace AssemblyGen
                 base.Return(returnValue);
                 return;
             }
+            _EnumeratorInst.Set(_CurrentItemField, returnValue);
             var yieldResumeLabel = _Il.DefineLabel();
             _YieldStateLabels.Add(yieldResumeLabel);
             _Target.Put(new SaveStateExpressionNode(this, _YieldStateLabels.Count));
-            _EnumeratorInst.Set(_CurrentItemField, returnValue);
             _Target.Put(ILExpressionNode.Return(ILExpressionNode.Constant(true)));
             _Target.Put(ILExpressionNode.Label(yieldResumeLabel));
         }
@@ -106,6 +106,7 @@ namespace AssemblyGen
             public SaveStateExpressionNode(IteratorGeneratorContext genCtx, int iterationStateIndex)
             {
                 _GenCtx = genCtx;
+                _IterationStateIndex = iterationStateIndex;
             }
 
             private IteratorGeneratorContext _GenCtx;
@@ -134,6 +135,11 @@ namespace AssemblyGen
 
             public void WriteInstructions(ILGenerator il)
             {
+                foreach (var pair in _GenCtx._LocalStateFields)
+                {
+                    ILExpressionNode.StoreLocal(pair.Key, ILExpressionNode.LoadField(ILExpressionNode.LoadThis, pair.Value))
+                        .WriteInstructions(il);
+                }
                 var iterationStateIndex = il.DeclareLocal(typeof(int));
                 ILExpressionNode.StoreLocal(iterationStateIndex.LocalIndex, ILExpressionNode.LoadField(ILExpressionNode.LoadThis, _GenCtx._IterationStateField))
                     .WriteInstructions(il);
@@ -147,11 +153,7 @@ namespace AssemblyGen
                     ILExpressionNode.LessThan(ILExpressionNode.LoadLocal(iterationStateIndex.LocalIndex), ILExpressionNode.Constant(0), false),
                     iteratorEndLabel)
                     .WriteInstructions(il);
-                foreach (var pair in _GenCtx._LocalStateFields)
-                {
-                    ILExpressionNode.StoreLocal(pair.Key, ILExpressionNode.LoadField(ILExpressionNode.LoadThis, pair.Value))
-                        .WriteInstructions(il);
-                }
+                
                 for (int i = 0; i < _GenCtx._YieldStateLabels.Count; i++)
                 {
                     var label = _GenCtx._YieldStateLabels[i];

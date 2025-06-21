@@ -1,0 +1,7 @@
+﻿<serializerAssembly name="">
+  <sequentialBinaryType name="">
+    <value name="" type=""/>
+    <array name="" type="" length=""/>
+    <varLengthArray name="" type="" prefixType=""/>
+  </sequentialBinaryType>
+</serializerAssembly>
