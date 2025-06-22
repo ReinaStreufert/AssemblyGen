@@ -116,6 +116,15 @@ namespace AssemblyGen
             });
         }
 
+        public static ILNode NewArray(Type elementType, IILExpressionNode length)
+        {
+            return new ILNode(il =>
+            {
+                length.WriteInstructions(il);
+                il.Emit(OpCodes.Newarr, elementType);
+            });
+        }
+
         public static ILNode Return(IILExpressionNode? returnValue = null)
         {
             return new ILNode(il =>

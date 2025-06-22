@@ -8,9 +8,9 @@ using System.Xml;
 
 namespace AssemblyGen.Serialization
 {
-    public interface ISequentialBinaryElement
+    public interface ISerializationAssemblyBuilder
     {
-        public string ElementTypeName { get; }
-        public IBinaryElementBuilder GetBuilder(XmlElement metadata, TypeBuilder binaryType);
+        public void IncludeBinaryElementType(ISequentialBinaryElement elementType);
+        public PersistedAssemblyBuilder BuildFromXml(XmlDocument xml);
     }
 }

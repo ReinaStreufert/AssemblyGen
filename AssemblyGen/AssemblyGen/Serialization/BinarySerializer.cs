@@ -8,9 +8,9 @@ namespace AssemblyGen.Serialization
 {
     public static class BinarySerializer
     {
-        private static Dictionary<Type, ISequentialBinaryType> _BinaryTypeDict = new Dictionary<Type, ISequentialBinaryType>();
+        private static Dictionary<Type, IBinaryTypeSerializer> _BinaryTypeDict = new Dictionary<Type, IBinaryTypeSerializer>();
 
-        public static void IncludeBinaryType(ISequentialBinaryType binaryType)
+        public static void IncludeBinaryType(IBinaryTypeSerializer binaryType)
         {
             _BinaryTypeDict.Add(binaryType.Type, binaryType);
         }
@@ -37,7 +37,7 @@ namespace AssemblyGen.Serialization
                 return Deserialize<T>(reader);
         }
 
-        private static ISequentialBinaryType GetBinaryType(Type type)
+        private static IBinaryTypeSerializer GetBinaryType(Type type)
         {
             if (!_BinaryTypeDict.TryGetValue(type, out var binaryType))
                 throw new ArgumentException(nameof(type));

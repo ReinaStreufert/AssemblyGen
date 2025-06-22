@@ -104,6 +104,11 @@ namespace AssemblyGen
             return new ConstructorCallSymbol(_Destination, constructor, args);
         }
 
+        public Symbol NewArray(Symbol length)
+        {
+            return new NewArraySymbol(_Destination, _Type, length);
+        }
+
         public Symbol GetReflectedTypeObject()
         {
             return new TypeOfSymbol(_Destination, _Type);

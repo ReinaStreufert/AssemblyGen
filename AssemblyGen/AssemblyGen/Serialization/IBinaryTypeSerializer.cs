@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace AssemblyGen.Serialization
 {
-    public interface ISequentialBinaryType
+    public interface IBinaryTypeSerializer
     {
         public Type Type { get; }
         public void Serialize(object value, BinaryWriter writer);

@@ -33,6 +33,7 @@ namespace AssemblyGen
     public interface ITypeContext<TSymbol> : IMemberable<TSymbol> where TSymbol : ISymbol<TSymbol>
     {
         public TSymbol New(params TSymbol[] args);
+        public TSymbol NewArray(TSymbol length);
         public TSymbol GetReflectedTypeObject();
     }
 
