@@ -148,6 +148,11 @@ namespace AssemblyGen
             return new ConstructorCallSymbol(_Target, constructor, arguments);
         }
 
+        public Symbol Cast(Type type, Symbol symbol)
+        {
+            return new CastSymbol(_Target, type, symbol);
+        }
+
         protected abstract class Block : IBlock
         {
             public bool HasEnded => _HasEnded;

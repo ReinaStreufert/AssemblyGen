@@ -3,5 +3,6 @@
     <value name="" type=""/>
     <buffer name="" length=""/>
     <varBuffer name="" prefixType=""/>
+    <signature name="" hex=""/>
   </sequentialBinaryType>
 </serializerAssembly>

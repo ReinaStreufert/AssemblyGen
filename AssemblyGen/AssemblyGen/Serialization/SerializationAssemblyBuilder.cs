@@ -38,7 +38,7 @@ namespace AssemblyGen.Serialization
                 var binarySerializerStaticType = ctx.Type(typeof(BinarySerializer));
                 foreach (var serializerConstructor in binaryTypeSerializers)
                     binarySerializerStaticType.Call(nameof(BinarySerializer.IncludeBinaryType), ctx.New(serializerConstructor));
-                    
+                ctx.Return();
             };
             // global static methods named .cctor are initializers which run before any other code
             var globalMethod = moduleBuilder.DefineGlobalMethod(".cctor", MethodAttributes.Assembly | MethodAttributes.Static, null, null);
@@ -59,6 +59,7 @@ namespace AssemblyGen.Serialization
             IncludeBinaryElementType(new ValueElement());
             IncludeBinaryElementType(new BufferElement());
             IncludeBinaryElementType(new VarBufferElement());
+            IncludeBinaryElementType(new SignatureElement());
         }
 
         private IEnumerable<IBinaryElementBuilder> GetElementBuilders(XmlElement binaryTypeXmlNode, TypeBuilder binaryType)
@@ -85,10 +86,13 @@ namespace AssemblyGen.Serialization
             var binaryWriterParameter = typeof(BinaryWriter).AsParameter();
             MethodGenerator serializeGenerator = ctx =>
             {
-                var value = ctx.GetArgument(valueParameter);
+                var uncastedValue = ctx.GetArgument(valueParameter);
+                var value = ctx.DeclareLocal(binaryType);
+                value.Assign(ctx.Cast(binaryType, uncastedValue));
                 var binaryWriter = ctx.GetArgument(binaryWriterParameter);
                 foreach (var elementBuilder in elementBuilders)
                     elementBuilder.GenerateSerializer(ctx, binaryWriter, value);
+                ctx.Return();
             };
             var serializerMethodBuilder = binaryTypeSerializerBuilder.DefineMethod("Serialize_impl", MethodAttributes.Assembly | MethodAttributes.Virtual, serializeGenerator, typeof(void), valueParameter, binaryWriterParameter);
             binaryTypeSerializerBuilder.DefineMethodOverride(serializerMethodBuilder, typeof(IBinaryTypeSerializer).GetMethod(nameof(IBinaryTypeSerializer.Serialize))!);

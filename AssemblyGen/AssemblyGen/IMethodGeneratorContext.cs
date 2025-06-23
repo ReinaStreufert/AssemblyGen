@@ -19,10 +19,11 @@ namespace AssemblyGen
         public ILambdaBlock<TSymbol> BeginLambda(Type returnType, params Parameter[] parameters);
         public IIfBlock<TSymbol> BeginIfStatement(TSymbol condition);
         public ILoopBlock BeginLoop();
-        public void Throw(Symbol exception);
+        public void Throw(TSymbol exception);
         public ITypeContext<TSymbol> Type(Type type);
-        public TSymbol New(ConstructorInfo constructor, params Symbol[] arguments);
-        public TSymbol Delegate(MethodInfo method, Type delegateType, Symbol? instance);
+        public TSymbol New(ConstructorInfo constructor, params TSymbol[] arguments);
+        public TSymbol Delegate(MethodInfo method, Type delegateType, TSymbol? instance);
+        public TSymbol Cast(Type type, TSymbol symbol);
     }
 
     public interface IMethodGeneratorContext : IMethodGeneratorContext<Symbol, AssignableSymbol>

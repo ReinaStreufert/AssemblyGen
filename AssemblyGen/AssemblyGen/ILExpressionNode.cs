@@ -135,6 +135,15 @@ namespace AssemblyGen
             });
         }
 
+        public static ILNode CastClass(Type type, IILExpressionNode value)
+        {
+            return new ILNode(il =>
+            {
+                value.WriteInstructions(il);
+                il.Emit(OpCodes.Castclass, type);
+            });
+        }
+
         public static ILNode LoadField(IILExpressionNode? instance, FieldInfo field)
         {
             return new ILNode(il =>
