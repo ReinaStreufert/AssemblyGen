@@ -11,11 +11,13 @@ namespace AssemblyGen
 {
     public partial class MethodGeneratorContext : IMethodGeneratorContext
     {
-        public virtual Symbol? This => _IsStatic ? null : new ArgumentSymbol(_Target, 0, _TypeBuilder, 0);
+        public virtual Symbol? This => _IsStatic ? null : new ArgumentSymbol(_Target, 0, _TypeBuilder!, 0);
         public virtual bool IsIterator => false;
 
-        public MethodGeneratorContext(TypeBuilder typeBuilder, ILGenerator il, Type returnType, Parameter[] parameters, bool isStatic)
+        public MethodGeneratorContext(TypeBuilder? typeBuilder, ILGenerator il, Type returnType, Parameter[] parameters, bool isStatic)
         {
+            if (!isStatic && typeBuilder == null)
+                throw new ArgumentNullException(nameof(typeBuilder));
             _Il = il;
             _ReturnType = returnType;
             _IsStatic = isStatic;
@@ -26,7 +28,7 @@ namespace AssemblyGen
             _TypeBuilder = typeBuilder;
         }
 
-        protected TypeBuilder _TypeBuilder;
+        protected TypeBuilder? _TypeBuilder;
         protected ILGenerator _Il;
         protected Type _ReturnType;
         protected ImmutableDictionary<Parameter, int> _ParameterIndices;
@@ -95,6 +97,8 @@ namespace AssemblyGen
 
         public ILambdaBlock<Symbol> BeginLambda(Type returnType, params Parameter[] parameters)
         {
+            if (_TypeBuilder == null)
+                throw new InvalidOperationException("Lambdas are unavailable in a method which is not a member of a type");
             var closureTypeBuilder = _TypeBuilder.DefineNestedType(Identifier.Random(), TypeAttributes.NestedPrivate | TypeAttributes.Class);
             var constructor = closureTypeBuilder.DefineDefaultConstructor(MethodAttributes.Public);
             var closureLocal = _Il.DeclareLocal(closureTypeBuilder);
