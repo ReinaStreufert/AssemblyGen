@@ -108,7 +108,7 @@ namespace AssemblyGen.Serialization
             };
             var deserializerMethodBuilder = binaryTypeSerializerBuilder.DefineMethod("Deserialize_impl", MethodAttributes.Assembly | MethodAttributes.Virtual, deserializeGenerator, typeof(object), binaryReaderParameter);
             binaryTypeSerializerBuilder.DefineMethodOverride(deserializerMethodBuilder, typeof(IBinaryTypeSerializer).GetMethod(nameof(IBinaryTypeSerializer.Deserialize))!);
-            var constructor = binaryTypeSerializerBuilder.DefineDefaultConstructor(MethodAttributes.Assembly);
+            var constructor = binaryTypeSerializerBuilder.DefineDefaultConstructor(MethodAttributes.Public);
             binaryTypeSerializerBuilder.CreateType();
             return constructor;
         }
