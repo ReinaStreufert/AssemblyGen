@@ -53,7 +53,7 @@ namespace AssemblyGen
                         return null;
                 }
                 var parameterType = parameter.ParameterType;
-                if (parameterType.IsGenericType)
+                if (parameterType.IsGenericParameter)
                 {
                     if (genericDict!.TryGetValue(parameter.ParameterType, out var genericArg))
                     {
