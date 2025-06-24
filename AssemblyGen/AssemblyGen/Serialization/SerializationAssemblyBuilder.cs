@@ -60,6 +60,7 @@ namespace AssemblyGen.Serialization
             IncludeBinaryElementType(new BufferElement());
             IncludeBinaryElementType(new VarBufferElement());
             IncludeBinaryElementType(new SignatureElement());
+            IncludeBinaryElementType(new StringElement());
         }
 
         private IEnumerable<IBinaryElementBuilder> GetElementBuilders(XmlElement binaryTypeXmlNode, TypeBuilder binaryType)

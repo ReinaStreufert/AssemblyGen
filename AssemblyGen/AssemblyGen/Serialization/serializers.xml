@@ -4,5 +4,6 @@
     <buffer name="" length=""/>
     <varBuffer name="" prefixType=""/>
     <signature name="" hex=""/>
+    <string name=""/>
   </sequentialBinaryType>
 </serializerAssembly>
